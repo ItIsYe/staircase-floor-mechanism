@@ -14,6 +14,16 @@ Laedt `treppe_boden.lua`, `config.lua` (nur beim ersten Mal / bei fehlenden Feld
 
 **Update:** denselben Befehl (oder `installer`, falls schon vorhanden) erneut ausfuehren. `treppe_boden.lua` und `startup.lua` werden neu geladen, `config.lua` wird migriert (neue Felder ergaenzt, eigene Werte bleiben erhalten).
 
+## Peripheral-Namen
+
+Alle Peripheral-Namen in `config.lua` sind **exakte Namen**, keine Textfragmente. Die Blocke/Modems werden NICHT umbenannt -- stattdessen werden die automatisch von CC:Tweaked vergebenen Standardnamen (z.B. `Create_SequencedGearshift_2`, `redstone_relay_9`) direkt eingetragen.
+
+So findet ihr heraus, welcher Standardname zu welcher Funktion gehoert:
+
+1. Im Computer eingeben: `lua` dann `peripheral.getNames()` -- listet alle vorhandenen Peripherals
+2. Jedes einzeln testen, z.B. `peripheral.wrap("Create_SequencedGearshift_2").move(1,1)` und beobachten, welcher Block sich bewegt
+3. Zugeordnete Namen in `config.lua` eintragen
+
 ## Aufbau
 
 **Achsen:** Z = rauf/runter, X = vor/zurueck
