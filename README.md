@@ -65,6 +65,8 @@ Nicht jede Position hat einen eigenen Kontakt — z.B. bestaetigt das X-ausgefah
 
 Beim Boden wird "ausgefahren" ueber **zwei** Relais gemeinsam bestaetigt: `boden_x_ausgefahren` (Position) UND `boden_x_ausgefahren_drehkontrolle` (Drehung korrekt erfolgt). Erst wenn beide Relais gleichzeitig ein Signal geben, gilt der Boden als sicher in Endlage.
 
+Bei Treppenmodul1 wird "eingefahren" (verschwunden) ebenfalls ueber **zwei** Relais gemeinsam bestaetigt: `treppe1_x_eingefahren` (X-Position) UND `treppe1_x_eingefahren_z_kontrolle` (Z-Achse Endpunkt "unten"). Treppenmodul2 hat weiterhin nur einen einzelnen Kontakt pro Endposition.
+
 ## Redstone-Signale (funktionsspezifisch)
 
 - Treppenmodul1: ein Signal fuer Z-Achsen-Bewegung (beide Richtungen)
