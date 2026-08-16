@@ -133,22 +133,24 @@ local relay_t2_x_ein = findRelay(cfg.redstone_relais.eingaenge.treppe2_x_eingefa
 local relay_t2_x_aus = findRelay(cfg.redstone_relais.eingaenge.treppe2_x_ausgefahren)
 -- Boden Grundstellung (Treppe sichtbar): X ausgefahren + Z eingefahren + nicht gedreht
 local relay_b_x_aus_grund = findRelay(cfg.redstone_relais.eingaenge.boden_x_ausgefahren_grund)
-local relay_b_z_kontakt   = findRelay(cfg.redstone_relais.eingaenge.boden_z_kontakt)
+local relay_b_z_eingefahren = findRelay(cfg.redstone_relais.eingaenge.boden_z_eingefahren)
 local relay_b_nicht_gedreht = findRelay(cfg.redstone_relais.eingaenge.boden_nicht_gedreht)
 
--- Boden sichtbar (Treppe weg): X eingefahren + Z ausgefahren (relay_b_z_kontakt inaktiv) + gedreht
-local relay_b_x_ein  = findRelay(cfg.redstone_relais.eingaenge.boden_x_eingefahren)
-local relay_b_gedreht = findRelay(cfg.redstone_relais.eingaenge.boden_gedreht)
+-- Boden sichtbar (Treppe weg): X eingefahren (2-fach bestaetigt) + Z ausgefahren.
+-- Kein dediziertes Relay fuer "gedreht" vorhanden -- wird hier NICHT geprueft.
+local relay_b_x_ein = findRelay(cfg.redstone_relais.eingaenge.boden_x_eingefahren)
+local relay_b_x_ein_zusatz = findRelay(cfg.redstone_relais.eingaenge.boden_x_eingefahren_zusatz)
+local relay_b_z_ausgefahren = findRelay(cfg.redstone_relais.eingaenge.boden_z_ausgefahren)
 
 local relay_boden_grundstellung_bestaetigt = {
     getInput = function(side)
-        return relay_b_x_aus_grund.getInput(side) and relay_b_z_kontakt.getInput(side) and relay_b_nicht_gedreht.getInput(side)
+        return relay_b_x_aus_grund.getInput(side) and relay_b_z_eingefahren.getInput(side) and relay_b_nicht_gedreht.getInput(side)
     end
 }
 
 local relay_boden_sichtbar_bestaetigt = {
     getInput = function(side)
-        return relay_b_x_ein.getInput(side) and not relay_b_z_kontakt.getInput(side) and relay_b_gedreht.getInput(side)
+        return relay_b_x_ein.getInput(side) and relay_b_x_ein_zusatz.getInput(side) and relay_b_z_ausgefahren.getInput(side)
     end
 }
 
