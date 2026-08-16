@@ -63,10 +63,12 @@ Der umgekehrte Ablauf (`Boden -> Treppe`) laeuft spiegelverkehrt.
 
 Nicht jede Position hat einen eigenen Kontakt — z.B. bestaetigt das X-ausgefahren-Relay bei Treppenmodul1 gleichzeitig auch Z-eingefahren, weil beide Zustaende an der gleichen physischen Position zusammenfallen.
 
-Beim Boden wird jeder der beiden Zustaende ueber **drei** Relais gemeinsam bestaetigt:
+Beim Boden wird jeder der beiden Zustaende ueber **zwei** Relais gemeinsam bestaetigt (Stand: Nutzer-Vorgabe per Tabelle):
 
-- **Grundstellung** (Treppe sichtbar): X ausgefahren (`boden_x_ausgefahren_grund`) UND Z eingefahren (`boden_z_eingefahren`) UND nicht gedreht (`boden_nicht_gedreht`)
-- **Boden sichtbar** (Treppe weg): X eingefahren, zweifach bestaetigt (`boden_x_eingefahren` UND `boden_x_eingefahren_zusatz`) UND Z ausgefahren (`boden_z_ausgefahren`). Fuer diesen Zustand gibt es aktuell **kein** dediziertes Relay zur Drehungsbestaetigung -- die Drehung wird hier nicht geprueft.
+- **Grundstellung** (Treppe sichtbar): X eingefahren (`boden_x_grund_kontakt`, Relay `redstone_relay_10`) UND Z eingefahren (`boden_z_eingefahren`, Relay `redstone_relay_9`). Fuer die Drehung gibt es aktuell **kein** Relay -- wird nicht geprueft.
+- **Boden sichtbar** (Treppe weg): X eingefahren, zweifach bestaetigt (`boden_x_eingefahren` UND `boden_x_eingefahren_zusatz`, Relays `redstone_relay_10` und `redstone_relay_8`) UND gedreht (`boden_gedreht`, Relay `redstone_relay_14`). Fuer Z ausgefahren gibt es aktuell **kein** Relay -- wird nicht geprueft.
+
+**Achtung:** `boden_x_grund_kontakt` (Grundstellung) und `boden_x_eingefahren` (Boden sichtbar) zeigen beide auf denselben physischen Relay (`redstone_relay_10`) -- das ist so von Nutzerseite explizit vorgegeben, auch wenn dadurch der X-Anteil beider Zustandspruefungen vom exakt gleichen Signal abhaengt.
 
 Bei Treppenmodul1 wird "eingefahren" (verschwunden) ebenfalls ueber **zwei** Relais gemeinsam bestaetigt: `treppe1_x_eingefahren` (X-Position) UND `treppe1_x_eingefahren_z_kontrolle` (Z-Achse Endpunkt "unten"). Treppenmodul2 hat weiterhin nur einen einzelnen Kontakt pro Endposition.
 
