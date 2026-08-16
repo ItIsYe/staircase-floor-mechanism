@@ -65,8 +65,8 @@ Nicht jede Position hat einen eigenen Kontakt — z.B. bestaetigt das X-ausgefah
 
 Beim Boden wird jeder der beiden Zustaende ueber **drei** Relais gemeinsam bestaetigt:
 
-- **Grundstellung** (Treppe sichtbar): X ausgefahren (`boden_x_ausgefahren_grund`) UND Z eingefahren (`boden_z_kontakt` aktiv) UND nicht gedreht (`boden_nicht_gedreht`)
-- **Boden sichtbar** (Treppe weg): X eingefahren (`boden_x_eingefahren`) UND Z ausgefahren (`boden_z_kontakt` **inaktiv**, derselbe Kontakt wie oben, nur umgekehrt gelesen) UND gedreht (`boden_gedreht`)
+- **Grundstellung** (Treppe sichtbar): X ausgefahren (`boden_x_ausgefahren_grund`) UND Z eingefahren (`boden_z_eingefahren`) UND nicht gedreht (`boden_nicht_gedreht`)
+- **Boden sichtbar** (Treppe weg): X eingefahren, zweifach bestaetigt (`boden_x_eingefahren` UND `boden_x_eingefahren_zusatz`) UND Z ausgefahren (`boden_z_ausgefahren`). Fuer diesen Zustand gibt es aktuell **kein** dediziertes Relay zur Drehungsbestaetigung -- die Drehung wird hier nicht geprueft.
 
 Bei Treppenmodul1 wird "eingefahren" (verschwunden) ebenfalls ueber **zwei** Relais gemeinsam bestaetigt: `treppe1_x_eingefahren` (X-Position) UND `treppe1_x_eingefahren_z_kontrolle` (Z-Achse Endpunkt "unten"). Treppenmodul2 hat weiterhin nur einen einzelnen Kontakt pro Endposition.
 
