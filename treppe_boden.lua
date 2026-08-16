@@ -131,26 +131,29 @@ local relay_t1_x_ein_bestaetigt = {
 local relay_t1_x_aus = findRelay(cfg.redstone_relais.eingaenge.treppe1_x_ausgefahren)
 local relay_t2_x_ein = findRelay(cfg.redstone_relais.eingaenge.treppe2_x_eingefahren)
 local relay_t2_x_aus = findRelay(cfg.redstone_relais.eingaenge.treppe2_x_ausgefahren)
--- Boden Grundstellung (Treppe sichtbar): X ausgefahren + Z eingefahren + nicht gedreht
-local relay_b_x_aus_grund = findRelay(cfg.redstone_relais.eingaenge.boden_x_ausgefahren_grund)
+-- Boden Grundstellung (Treppe sichtbar): X eingefahren + Z eingefahren.
+-- HINWEIS: laut Vorgabe existiert kein Relay fuer die Drehungsbestaetigung
+-- der Grundstellung -- wird NICHT geprueft.
+-- HINWEIS: relay_b_x_grund nutzt DENSELBEN Relay-Namen wie relay_b_x_ein
+-- unten (redstone_relay_10) -- so vom Nutzer explizit bestaetigt/vorgegeben.
+local relay_b_x_grund = findRelay(cfg.redstone_relais.eingaenge.boden_x_grund_kontakt)
 local relay_b_z_eingefahren = findRelay(cfg.redstone_relais.eingaenge.boden_z_eingefahren)
-local relay_b_nicht_gedreht = findRelay(cfg.redstone_relais.eingaenge.boden_nicht_gedreht)
 
--- Boden sichtbar (Treppe weg): X eingefahren (2-fach bestaetigt) + Z ausgefahren.
--- Kein dediziertes Relay fuer "gedreht" vorhanden -- wird hier NICHT geprueft.
+-- Boden sichtbar (Treppe weg): X eingefahren (2-fach bestaetigt) + gedreht.
+-- HINWEIS: laut Vorgabe existiert kein Relay fuer Z ausgefahren -- entfaellt.
 local relay_b_x_ein = findRelay(cfg.redstone_relais.eingaenge.boden_x_eingefahren)
 local relay_b_x_ein_zusatz = findRelay(cfg.redstone_relais.eingaenge.boden_x_eingefahren_zusatz)
-local relay_b_z_ausgefahren = findRelay(cfg.redstone_relais.eingaenge.boden_z_ausgefahren)
+local relay_b_gedreht = findRelay(cfg.redstone_relais.eingaenge.boden_gedreht)
 
 local relay_boden_grundstellung_bestaetigt = {
     getInput = function(side)
-        return relay_b_x_aus_grund.getInput(side) and relay_b_z_eingefahren.getInput(side) and relay_b_nicht_gedreht.getInput(side)
+        return relay_b_x_grund.getInput(side) and relay_b_z_eingefahren.getInput(side)
     end
 }
 
 local relay_boden_sichtbar_bestaetigt = {
     getInput = function(side)
-        return relay_b_x_ein.getInput(side) and relay_b_x_ein_zusatz.getInput(side) and relay_b_z_ausgefahren.getInput(side)
+        return relay_b_x_ein.getInput(side) and relay_b_x_ein_zusatz.getInput(side) and relay_b_gedreht.getInput(side)
     end
 }
 
