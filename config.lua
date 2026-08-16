@@ -12,7 +12,7 @@
 
 return {
 
-    config_version = 7,
+    config_version = 8,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -22,6 +22,19 @@ return {
         treppe2_einfahren = "Create_SequencedGearshift_3",
         boden_ausfahren   = "Create_SequencedGearshift_6",
         boden_einfahren   = "Create_SequencedGearshift_5",
+    },
+
+    -- Richtungsmodifier je Gearshift: 1 oder -1. Falls ein Gearshift beim
+    -- Ausfahren tatsaechlich einfaehrt (oder umgekehrt), hier NUR das
+    -- Vorzeichen umdrehen -- kein Code-Aendern noetig. Zum Testen: einzeln
+    -- ueber die manuelle Fahrt (Menuepunkte 4/5/6) beobachten und anpassen.
+    richtung = {
+        treppe1_ausfahren = 1,
+        treppe1_einfahren = 1,
+        treppe2_ausfahren = 1,
+        treppe2_einfahren = 1,
+        boden_ausfahren   = 1,
+        boden_einfahren   = 1,
     },
 
     -- Redstone Relais (CC:Tweaked): jedes Signal bekommt sein eigenes,
