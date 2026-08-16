@@ -29,11 +29,11 @@ return {
     -- Vorzeichen umdrehen -- kein Code-Aendern noetig. Zum Testen: einzeln
     -- ueber die manuelle Fahrt (Menuepunkte 4/5/6) beobachten und anpassen.
     richtung = {
-        treppe1_ausfahren = 1,
+        treppe1_ausfahren = -1,
         treppe1_einfahren = 1,
-        treppe2_ausfahren = 1,
+        treppe2_ausfahren = -1,
         treppe2_einfahren = 1,
-        boden_ausfahren   = 1,
+        boden_ausfahren   = -1,
         boden_einfahren   = 1,
     },
 
@@ -68,7 +68,7 @@ return {
             -- HINWEIS: boden_x_grund_kontakt nutzt DENSELBEN Relay wie boden_x_eingefahren
             -- unten (redstone_relay_10) -- so von Nutzer explizit bestaetigt/vorgegeben.
             boden_x_grund_kontakt = "redstone_relay_10",  -- Grundstellung: X eingefahren
-            boden_z_eingefahren   = "redstone_relay_9",   -- Grundstellung: Z eingefahren
+            boden_z_eingefahren   = "redstone_relay_8",   -- Grundstellung: Z eingefahren
 
             -- Boden sichtbar (Treppe weg): X eingefahren (2-fach bestaetigt) + gedreht
             -- HINWEIS: laut Vorgabe existiert kein Relay fuer Z ausgefahren -- entfaellt.
