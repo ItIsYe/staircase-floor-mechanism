@@ -12,7 +12,7 @@
 
 return {
 
-    config_version = 8,
+    config_version = 9,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -29,11 +29,11 @@ return {
     -- Vorzeichen umdrehen -- kein Code-Aendern noetig. Zum Testen: einzeln
     -- ueber die manuelle Fahrt (Menuepunkte 4/5/6) beobachten und anpassen.
     richtung = {
-        treppe1_ausfahren = -1,
+        treppe1_ausfahren = 1,
         treppe1_einfahren = 1,
-        treppe2_ausfahren = -1,
+        treppe2_ausfahren = 1,
         treppe2_einfahren = 1,
-        boden_ausfahren   = -1,
+        boden_ausfahren   = 1,
         boden_einfahren   = 1,
     },
 
@@ -57,6 +57,7 @@ return {
         -- Redstone-Wire-Connector mit Farbkanaelen)
         eingaenge = {
             treppe1_x_eingefahren = "redstone_relay_6",
+            treppe1_x_eingefahren_z_kontrolle = "redstone_relay_11",  -- Z-Achse Endpunkt "unten" bei X eingefahren
             treppe1_x_ausgefahren = "redstone_relay_7",   -- = Z eingefahren
             treppe2_x_eingefahren = "redstone_relay_1",
             treppe2_x_ausgefahren = "redstone_relay_2",
