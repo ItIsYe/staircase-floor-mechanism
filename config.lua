@@ -12,7 +12,7 @@
 
 return {
 
-    config_version = 11,
+    config_version = 12,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -62,17 +62,19 @@ return {
             treppe2_x_eingefahren = "redstone_relay_1",
             treppe2_x_ausgefahren = "redstone_relay_2",
 
-            -- Boden Grundstellung (Treppe sichtbar): X ausgefahren + Z eingefahren + nicht gedreht
-            boden_x_ausgefahren_grund = "redstone_relay_12",  -- Grundstellung: X ausgefahren
-            boden_z_eingefahren       = "redstone_relay_9",   -- Grundstellung: Z eingefahren
-            boden_nicht_gedreht       = "redstone_relay_14",  -- Grundstellung: nicht gedreht
+            -- Boden Grundstellung (Treppe sichtbar): X eingefahren + Z eingefahren
+            -- HINWEIS: laut Vorgabe (Excel-Tabelle) existiert noch KEIN Relay fuer
+            -- die Drehungsbestaetigung der Grundstellung -- wird daher NICHT geprueft.
+            -- HINWEIS: boden_x_grund_kontakt nutzt DENSELBEN Relay wie boden_x_eingefahren
+            -- unten (redstone_relay_10) -- so von Nutzer explizit bestaetigt/vorgegeben.
+            boden_x_grund_kontakt = "redstone_relay_10",  -- Grundstellung: X eingefahren
+            boden_z_eingefahren   = "redstone_relay_9",   -- Grundstellung: Z eingefahren
 
-            -- Boden sichtbar (Treppe weg): X eingefahren (2-fach bestaetigt) + Z ausgefahren
-            -- HINWEIS: aktuell kein dediziertes Relay fuer "gedreht" im
-            -- Boden-sichtbar-Zustand vorhanden -- wird daher NICHT geprueft.
+            -- Boden sichtbar (Treppe weg): X eingefahren (2-fach bestaetigt) + gedreht
+            -- HINWEIS: laut Vorgabe existiert kein Relay fuer Z ausgefahren -- entfaellt.
             boden_x_eingefahren        = "redstone_relay_10",
             boden_x_eingefahren_zusatz = "redstone_relay_8",   -- zusaetzliche Bestaetigung X eingefahren
-            boden_z_ausgefahren        = "redstone_relay_15",  -- Boden sichtbar: Z ausgefahren
+            boden_gedreht              = "redstone_relay_14",  -- Boden sichtbar: gedreht bestaetigt
         },
     },
 
