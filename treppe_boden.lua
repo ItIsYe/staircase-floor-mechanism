@@ -106,7 +106,35 @@ local ERLAUBTE_SPIELER = cfg.spieler.erlaubte_spieler
 
 local TIMEOUT_S = cfg.timeout_sekunden
 local zustand = nil   -- wird bei der Initialisierung gesetzt: "treppe" oder "boden"
-local ablaufLaeuft = false
+local verriegelt = false  -- true waehrend irgendeine Bewegung laeuft -- blockiert alles andere
+
+local function kanalAn(kanal)
+    return connector.getRedstoneForChannel(kanal) > 0
+end
+
+-- Prueft per Kontakt, ob ALLE Module tatsaechlich in der zu 'zustand' passenden
+-- Endlage stehen. Nur wenn true, darf die naechste Aktion gestartet werden.
+local function inEndlage()
+    if zustand == "treppe" then
+        return kanalAn(CH_T1_X_AUS) and kanalAn(CH_T2_X_AUS) and kanalAn(CH_B_X_EIN)
+    elseif zustand == "boden" then
+        return kanalAn(CH_T1_X_EIN) and kanalAn(CH_T2_X_EIN) and kanalAn(CH_B_X_AUS)
+    end
+    return false
+end
+
+-- Versucht die Verriegelung zu bekommen. Gibt false zurueck, wenn bereits
+-- eine Bewegung laeuft oder das System nicht nachweislich in Endlage ist.
+local function verriegelungAnfordern()
+    if verriegelt then return false end
+    if not inEndlage() then return false end
+    verriegelt = true
+    return true
+end
+
+local function verriegelungFreigeben()
+    verriegelt = false
+end
 
 -- ============================================
 -- Geschwindigkeiten anwenden/lesen
@@ -134,10 +162,6 @@ end
 -- ============================================
 -- Hilfsfunktionen
 -- ============================================
-
-local function kanalAn(kanal)
-    return connector.getRedstoneForChannel(kanal) > 0
-end
 
 local function warteAufKanal(kanal, zielZustand)
     local start = os.clock()
@@ -192,27 +216,26 @@ local function treppeHerstellen()
 end
 
 local function ausloesen()
-    if ablaufLaeuft then return end
-    ablaufLaeuft = true
+    if not verriegelungAnfordern() then return false end
     if zustand == "treppe" then
         treppeVerschwinden()
     else
         treppeHerstellen()
     end
-    ablaufLaeuft = false
+    verriegelungFreigeben()
+    return true
 end
 
 -- Erzwingt einen bestimmten Zielzustand (fuer Geofence-Logik, kein Toggle)
 local function zielzustandErzwingen(ziel)
-    if ablaufLaeuft then return end
     if zustand == ziel then return end
-    ablaufLaeuft = true
+    if not verriegelungAnfordern() then return end
     if ziel == "treppe" then
         treppeHerstellen()
     else
         treppeVerschwinden()
     end
-    ablaufLaeuft = false
+    verriegelungFreigeben()
 end
 
 -- ============================================
@@ -383,6 +406,10 @@ end
 
 local function treppe1Manuell()
     print("")
+    if not verriegelungAnfordern() then
+        print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+        return
+    end
     print("Treppe1: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
@@ -390,24 +417,35 @@ local function treppe1Manuell()
     if r == "a" then treppe1_aus.move(runtime.treppe1, 1)
     elseif r == "e" then treppe1_ein.move(runtime.treppe1, 1) end
     redstone.setOutput(RS_TREPPE1_Z_SIDE, false)
+    verriegelungFreigeben()
 end
 
 local function treppe2Manuell()
     print("")
+    if not verriegelungAnfordern() then
+        print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+        return
+    end
     print("Treppe2: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
     if r == "a" then treppe2_aus.move(runtime.treppe2, 1)
     elseif r == "e" then treppe2_ein.move(runtime.treppe2, 1) end
+    verriegelungFreigeben()
 end
 
 local function bodenManuell()
     print("")
+    if not verriegelungAnfordern() then
+        print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+        return
+    end
     print("Boden: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
     if r == "a" then bodenBewegen(boden_aus, runtime.boden, CH_B_X_AUS)
     elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, CH_B_X_EIN) end
+    verriegelungFreigeben()
 end
 
 local function uiSchleife()
@@ -433,7 +471,12 @@ local function uiSchleife()
         elseif auswahl == "6" then bodenManuell()
 
         elseif auswahl == "9" then
-            ausloesen()
+            if not ausloesen() then
+                print("")
+                print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+                print("Weiter mit beliebiger Taste ...")
+                read()
+            end
 
         elseif auswahl == "0" then
             term.clear()
