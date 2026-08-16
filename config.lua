@@ -29,11 +29,11 @@ return {
     -- Vorzeichen umdrehen -- kein Code-Aendern noetig. Zum Testen: einzeln
     -- ueber die manuelle Fahrt (Menuepunkte 4/5/6) beobachten und anpassen.
     richtung = {
-        treppe1_ausfahren = 1,
+        treppe1_ausfahren = -1,
         treppe1_einfahren = 1,
-        treppe2_ausfahren = 1,
+        treppe2_ausfahren = -1,
         treppe2_einfahren = 1,
-        boden_ausfahren   = 1,
+        boden_ausfahren   = -1,
         boden_einfahren   = 1,
     },
 
