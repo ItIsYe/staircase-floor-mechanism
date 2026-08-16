@@ -118,6 +118,16 @@ local relay_boden_x   = findRelay(cfg.redstone_relais.ausgaenge.boden_x)
 
 -- Eingangs-Relais (Positionskontakte)
 local relay_t1_x_ein = findRelay(cfg.redstone_relais.eingaenge.treppe1_x_eingefahren)
+local relay_t1_z_unten = findRelay(cfg.redstone_relais.eingaenge.treppe1_x_eingefahren_z_kontrolle)
+
+-- Treppe1 gilt nur dann als wirklich "eingefahren" (verschwunden), wenn
+-- BEIDE Relais bestaetigen: X-Position (relay_t1_x_ein) UND Z-Achse unten
+-- (relay_t1_z_unten).
+local relay_t1_x_ein_bestaetigt = {
+    getInput = function(side)
+        return relay_t1_x_ein.getInput(side) and relay_t1_z_unten.getInput(side)
+    end
+}
 local relay_t1_x_aus = findRelay(cfg.redstone_relais.eingaenge.treppe1_x_ausgefahren)
 local relay_t2_x_ein = findRelay(cfg.redstone_relais.eingaenge.treppe2_x_eingefahren)
 local relay_t2_x_aus = findRelay(cfg.redstone_relais.eingaenge.treppe2_x_ausgefahren)
@@ -162,7 +172,7 @@ local function inEndlage()
     if zustand == "treppe" then
         return relaisAn(relay_t1_x_aus) and relaisAn(relay_t2_x_aus) and relaisAn(relay_b_x_ein)
     elseif zustand == "boden" then
-        return relaisAn(relay_t1_x_ein) and relaisAn(relay_t2_x_ein) and relaisAn(relay_b_x_aus_bestaetigt)
+        return relaisAn(relay_t1_x_ein_bestaetigt) and relaisAn(relay_t2_x_ein) and relaisAn(relay_b_x_aus_bestaetigt)
     end
     return false
 end
@@ -234,7 +244,7 @@ local function treppeVerschwinden()
     treppe1_ein.move(runtime.treppe1, RICHTUNG_T1_EIN)
     treppe2_ein.move(runtime.treppe2, RICHTUNG_T2_EIN)
 
-    warteAufRelay(relay_t1_x_ein, true)
+    warteAufRelay(relay_t1_x_ein_bestaetigt, true)
     warteAufRelay(relay_t2_x_ein, true)
     relaisSetzen(relay_treppe1_z, false)
 
@@ -287,7 +297,7 @@ local function zustandInitialisieren()
     print("Initialisiere Zustand ueber Relais-Kontakte ...")
 
     local treppeErkannt = relaisAn(relay_t1_x_aus) and relaisAn(relay_t2_x_aus) and relaisAn(relay_b_x_ein)
-    local bodenErkannt  = relaisAn(relay_t1_x_ein) and relaisAn(relay_t2_x_ein) and relaisAn(relay_b_x_aus_bestaetigt)
+    local bodenErkannt  = relaisAn(relay_t1_x_ein_bestaetigt) and relaisAn(relay_t2_x_ein) and relaisAn(relay_b_x_aus_bestaetigt)
 
     if treppeErkannt and not bodenErkannt then
         zustand = "treppe"
