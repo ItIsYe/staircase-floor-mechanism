@@ -40,12 +40,12 @@ return {
         -- Eingaenge (Positionskontakte, ersetzen den frueheren
         -- Redstone-Wire-Connector mit Farbkanaelen)
         eingaenge = {
-            treppe1_x_eingefahren = "treppe1_ein_relay",
-            treppe1_x_ausgefahren = "treppe1_aus_relay",   -- = Z eingefahren
-            treppe2_x_eingefahren = "treppe2_ein_relay",
-            treppe2_x_ausgefahren = "treppe2_aus_relay",
-            boden_x_eingefahren   = "boden_ein_relay",
-            boden_x_ausgefahren   = "boden_aus_relay",     -- = Z unten + X ausgefahren + gedreht
+            treppe1_x_eingefahren = "redstone_relay_6",
+            treppe1_x_ausgefahren = "redstone_relay_7",   -- = Z eingefahren
+            treppe2_x_eingefahren = "redstone_relay_1",
+            treppe2_x_ausgefahren = "redstone_relay_2",
+            boden_x_eingefahren   = "redstone_relay_8",
+            boden_x_ausgefahren   = "redstone_relay_9",     -- = Z unten + X ausgefahren + gedreht
         },
     },
 
