@@ -66,3 +66,7 @@ Statt eines reinen Ein-/Austrigger-Signals ueberwacht das Programm laufend, ob s
 - Verlassen alle Whitelist-Spieler den Bereich: Boden wird erzwungen (Treppe verschwindet)
 
 Zusaetzlich bleibt ein manueller Redstone-Trigger (`redstone_seiten.trigger`) als Toggle-Override erhalten, z.B. fuer Tests oder Notfallsteuerung.
+
+## Verriegelung
+
+Bevor eine neue Bewegung startet -- automatisch (Redstone/Geofence) oder manuell -- prueft das Programm per Kontakt, ob das System vollstaendig in einer bekannten Endlage steht (alle Module bestaetigt aus- oder eingefahren, passend zum aktuell gespeicherten Zustand). Laeuft bereits eine Bewegung oder ist der Zustand nicht eindeutig, wird die neue Aktion verweigert, statt Bewegungen zu ueberlappen.
