@@ -39,3 +39,13 @@ Kein Redstone Integrator (Seiten-Limit), stattdessen Immersive-Engineering-**Red
 ## Status
 
 Konzept vollstaendig, Skript-Erstversion vorhanden. Peripheral-Namen, Redstone-Seiten, Farbkanaele und Distanzen sind Platzhalter und muessen an die tatsaechliche Verkabelung angepasst werden. Noch keine In-Game-Tests durchgefuehrt.
+
+## Geschwindigkeiten (Rotation Speed Controller)
+
+Fahrgeschwindigkeit ist per Create-`Rotation Speed Controller` steuerbar, RPM-Bereich -256 bis 256:
+
+- Treppenmodul1: ein gemeinsamer Controller fuer beide Richtungen
+- Treppenmodul2: getrennter Controller fuer Ausfahren und Einfahren
+- Boden: getrennter Controller fuer Ausfahren und Einfahren
+
+Ziel-RPM werden in `config.lua` unter `geschwindigkeiten.rpm` vorbelegt, sind aber auch live im Programm unter Menuepunkt `g` abfragbar und aenderbar. Aenderungen werden in `treppe_runtime.cfg` gespeichert und bleiben bei einem Update/Installer-Lauf erhalten.
