@@ -9,7 +9,7 @@
 
 return {
 
-    config_version = 3,
+    config_version = 4,
 
     -- Peripheral-Namensfragmente (peripheral.find sucht Teilstring)
     peripherals = {
@@ -21,12 +21,37 @@ return {
         boden_einfahren   = "boden_einfahren",
     },
 
-    -- Redstone Relay (CC:Tweaked): einziger Redstone-Input am Computer
-    -- selbst ist der Trigger. Alle anderen Redstone-Ausgaenge (Treppe1-Z,
-    -- Boden-Z, Boden-X) laufen ueber diesen Relay-Peripheral, nicht ueber
-    -- physische Computer-Seiten.
-    redstone_relay = {
-        peripheral = "redstone_relay",
+    -- Redstone Relais (CC:Tweaked): jedes Signal bekommt sein eigenes,
+    -- dediziertes Relay. Die Seite am Relay ist egal (immer 'seite'),
+    -- da pro Relay ohnehin nur ein Signal anliegt. Der Trigger ist der
+    -- einzige Redstone-Input, der PHYSISCH am Computer selbst verkabelt
+    -- ist (siehe redstone_trigger unten), alles andere laeuft ueber
+    -- diese Relais-Peripherals.
+    redstone_relais = {
+        seite = "top",  -- gilt fuer ALLE Relais unten, Seite ist egal
+
+        -- Ausgaenge (Ansteuerung der Bewegung)
+        ausgaenge = {
+            treppe1_z = "treppe1_z_relay",
+            boden_z   = "boden_z_relay",
+            boden_x   = "boden_x_relay",
+        },
+
+        -- Eingaenge (Positionskontakte, ersetzen den frueheren
+        -- Redstone-Wire-Connector mit Farbkanaelen)
+        eingaenge = {
+            treppe1_x_eingefahren = "treppe1_ein_relay",
+            treppe1_x_ausgefahren = "treppe1_aus_relay",   -- = Z eingefahren
+            treppe2_x_eingefahren = "treppe2_ein_relay",
+            treppe2_x_ausgefahren = "treppe2_aus_relay",
+            boden_x_eingefahren   = "boden_ein_relay",
+            boden_x_ausgefahren   = "boden_aus_relay",     -- = Z unten + X ausgefahren + gedreht
+        },
+    },
+
+    -- Physischer Redstone-Input direkt am Computer (einziger, kein Relay)
+    redstone_trigger = {
+        seite = "left",
     },
 
     -- Bewegungsdistanzen in Bloecken
@@ -54,26 +79,6 @@ return {
             boden_ausfahren   = 16,
             boden_einfahren   = 16,
         },
-    },
-
-    -- Redstone-Wire-Connector Farbkanaele (Immersive Engineering)
-    farbkanaele = {
-        treppe1_x_eingefahren = "white",
-        treppe1_x_ausgefahren = "orange",     -- = Z eingefahren
-        treppe2_x_eingefahren = "light_blue",
-        treppe2_x_ausgefahren = "magenta",
-        boden_x_eingefahren   = "yellow",
-        boden_x_ausgefahren   = "lime",       -- = Z unten + X ausgefahren + gedreht
-    },
-
-    -- Redstone-Seiten: 'trigger' ist der einzige physisch am Computer
-    -- verkabelte Redstone-Input. treppe1_z/boden_z/boden_x sind Seiten
-    -- AM REDSTONE RELAY (siehe redstone_relay oben), nicht am Computer.
-    redstone_seiten = {
-        treppe1_z = "back",    -- Treppe1: Z-Achse, beide Richtungen (am Relay)
-        boden_z   = "top",     -- Boden: Z-Achse (am Relay)
-        boden_x   = "bottom",  -- Boden: X-Achse (am Relay, mit Z zusammen fuer Drehung)
-        trigger   = "left",    -- physischer Redstone-Input direkt am Computer
     },
 
     -- Zugriffskontrolle Player Detector (Advanced Peripherals)
