@@ -12,7 +12,7 @@
 
 return {
 
-    config_version = 10,
+    config_version = 11,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -64,12 +64,15 @@ return {
 
             -- Boden Grundstellung (Treppe sichtbar): X ausgefahren + Z eingefahren + nicht gedreht
             boden_x_ausgefahren_grund = "redstone_relay_12",  -- Grundstellung: X ausgefahren
-            boden_z_kontakt           = "redstone_relay_9",   -- aktiv = Z eingefahren (Grundstellung), inaktiv = Z ausgefahren (Boden sichtbar)
+            boden_z_eingefahren       = "redstone_relay_9",   -- Grundstellung: Z eingefahren
             boden_nicht_gedreht       = "redstone_relay_14",  -- Grundstellung: nicht gedreht
 
-            -- Boden sichtbar (Treppe weg): X eingefahren + Z ausgefahren (s.o. boden_z_kontakt inaktiv) + gedreht
-            boden_x_eingefahren = "redstone_relay_10",
-            boden_gedreht       = "redstone_relay_8",  -- Boden sichtbar: gedreht bestaetigt
+            -- Boden sichtbar (Treppe weg): X eingefahren (2-fach bestaetigt) + Z ausgefahren
+            -- HINWEIS: aktuell kein dediziertes Relay fuer "gedreht" im
+            -- Boden-sichtbar-Zustand vorhanden -- wird daher NICHT geprueft.
+            boden_x_eingefahren        = "redstone_relay_10",
+            boden_x_eingefahren_zusatz = "redstone_relay_8",   -- zusaetzliche Bestaetigung X eingefahren
+            boden_z_ausgefahren        = "redstone_relay_15",  -- Boden sichtbar: Z ausgefahren
         },
     },
 
