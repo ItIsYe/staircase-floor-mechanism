@@ -25,11 +25,11 @@ local runtime = {
     treppe2 = cfg.distanzen.treppe2,
     boden   = cfg.distanzen.boden,
 
-    rpm_treppe1           = cfg.geschwindigkeiten.rpm.treppe1,
-    rpm_treppe2_ausfahren  = cfg.geschwindigkeiten.rpm.treppe2_ausfahren,
-    rpm_treppe2_einfahren  = cfg.geschwindigkeiten.rpm.treppe2_einfahren,
-    rpm_boden_ausfahren    = cfg.geschwindigkeiten.rpm.boden_ausfahren,
-    rpm_boden_einfahren    = cfg.geschwindigkeiten.rpm.boden_einfahren,
+    rpm_treppe1            = cfg.geschwindigkeiten.rpm.treppe1,
+    rpm_treppe2_ausfahren   = cfg.geschwindigkeiten.rpm.treppe2_ausfahren,
+    rpm_treppe2_einfahren   = cfg.geschwindigkeiten.rpm.treppe2_einfahren,
+    rpm_boden_ausfahren     = cfg.geschwindigkeiten.rpm.boden_ausfahren,
+    rpm_boden_einfahren     = cfg.geschwindigkeiten.rpm.boden_einfahren,
 }
 
 local function ladeRuntime()
@@ -105,7 +105,7 @@ local PLAYER_RANGE = cfg.spieler.reichweite
 local ERLAUBTE_SPIELER = cfg.spieler.erlaubte_spieler
 
 local TIMEOUT_S = cfg.timeout_sekunden
-local zustand = "treppe"
+local zustand = nil   -- wird bei der Initialisierung gesetzt: "treppe" oder "boden"
 local ablaufLaeuft = false
 
 -- ============================================
@@ -123,8 +123,6 @@ local function geschwindigkeitLesen(controller)
     return controller.getTargetSpeed()
 end
 
--- Wendet alle in runtime gespeicherten RPM-Werte auf die Controller an.
--- Wird beim Start aufgerufen, damit gespeicherte Aenderungen wirksam werden.
 local function alleGeschwindigkeitenAnwenden()
     geschwindigkeitSetzen(speed_treppe1, runtime.rpm_treppe1)
     geschwindigkeitSetzen(speed_treppe2_ausfahren, runtime.rpm_treppe2_ausfahren)
@@ -136,6 +134,10 @@ end
 -- ============================================
 -- Hilfsfunktionen
 -- ============================================
+
+local function kanalAn(kanal)
+    return connector.getRedstoneForChannel(kanal) > 0
+end
 
 local function warteAufKanal(kanal, zielZustand)
     local start = os.clock()
@@ -200,11 +202,50 @@ local function ausloesen()
     ablaufLaeuft = false
 end
 
+-- Erzwingt einen bestimmten Zielzustand (fuer Geofence-Logik, kein Toggle)
+local function zielzustandErzwingen(ziel)
+    if ablaufLaeuft then return end
+    if zustand == ziel then return end
+    ablaufLaeuft = true
+    if ziel == "treppe" then
+        treppeHerstellen()
+    else
+        treppeVerschwinden()
+    end
+    ablaufLaeuft = false
+end
+
 -- ============================================
--- Zugriffskontrolle
+-- Initialisierung: Zustand beim Start ermitteln
 -- ============================================
 
-local function erlaubterSpielerInReichweite()
+local function zustandInitialisieren()
+    print("Initialisiere Zustand ueber Kontakte ...")
+
+    local treppeErkannt = kanalAn(CH_T1_X_AUS) and kanalAn(CH_T2_X_AUS) and kanalAn(CH_B_X_EIN)
+    local bodenErkannt  = kanalAn(CH_T1_X_EIN) and kanalAn(CH_T2_X_EIN) and kanalAn(CH_B_X_AUS)
+
+    if treppeErkannt and not bodenErkannt then
+        zustand = "treppe"
+        print("Zustand erkannt: Treppe sichtbar")
+    elseif bodenErkannt and not treppeErkannt then
+        zustand = "boden"
+        print("Zustand erkannt: Boden sichtbar")
+    else
+        print("Zustand nicht eindeutig -- fahre einmalig in Grundstellung (Treppe)")
+        zustand = "boden"  -- erzwingt treppeHerstellen() unten
+        redstone.setOutput(RS_TREPPE1_Z_SIDE, false)
+        redstone.setOutput(RS_BODEN_Z_SIDE, false)
+        redstone.setOutput(RS_BODEN_X_SIDE, false)
+        treppeHerstellen()
+    end
+end
+
+-- ============================================
+-- Zugriffskontrolle / Geofence
+-- ============================================
+
+local function erlaubterSpielerImBereich()
     if not playerDetector then return false end
     for _, name in ipairs(ERLAUBTE_SPIELER) do
         if playerDetector.isPlayerInRange(PLAYER_RANGE, name) then
@@ -214,25 +255,29 @@ local function erlaubterSpielerInReichweite()
     return false
 end
 
--- ============================================
--- Trigger-Ueberwachung
--- ============================================
+-- Solange mind. ein Whitelist-Spieler im Bereich ist: Treppe erzwingen.
+-- Verlassen alle Whitelist-Spieler den Bereich: Boden erzwingen (Treppe weg).
+local function geofenceUeberwachung()
+    while true do
+        if erlaubterSpielerImBereich() then
+            zielzustandErzwingen("treppe")
+        else
+            zielzustandErzwingen("boden")
+        end
+        sleep(0.5)
+    end
+end
 
-local function triggerUeberwachung()
+-- Manueller Redstone-Trigger bleibt als Override erhalten (Toggle)
+local function redstoneTriggerUeberwachung()
     local letzterRSZustand = redstone.getInput(RS_TRIGGER_SIDE)
-
     while true do
         local aktuellerRS = redstone.getInput(RS_TRIGGER_SIDE)
         if aktuellerRS and not letzterRSZustand then
             ausloesen()
         end
         letzterRSZustand = aktuellerRS
-
-        if erlaubterSpielerInReichweite() then
-            ausloesen()
-        end
-
-        sleep(0.5)
+        sleep(0.25)
     end
 end
 
@@ -259,7 +304,7 @@ local function zeichneUI()
     print("5) Treppe2 manuell")
     print("6) Boden manuell")
     print("")
-    print("9) Automatik: Verschwinden/Herstellen")
+    print("9) Automatik: Verschwinden/Herstellen (Toggle)")
     print("0) Beenden")
     print("")
     write("Auswahl: ")
@@ -400,4 +445,5 @@ end
 
 ladeRuntime()
 alleGeschwindigkeitenAnwenden()
-parallel.waitForAny(uiSchleife, triggerUeberwachung)
+zustandInitialisieren()
+parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung)
