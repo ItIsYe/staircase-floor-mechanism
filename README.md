@@ -46,6 +46,12 @@ Alles andere laeuft ueber **dedizierte Redstone-Relais** (`redstone_relais` in `
 
 Da jedes Relay nur ein einziges Signal traegt, ist die genutzte Seite am jeweiligen Relay beliebig — `redstone_relais.seite` gilt einheitlich fuer alle. Es gibt keinen Redstone Wire Connector und keine Farbkanaele mehr.
 
+## Richtungskalibrierung
+
+`move()` bewegt einen Gearshift in eine Richtung, die vom Vorzeichen des zweiten Parameters abhaengt (1 oder -1) -- welches Vorzeichen tatsaechlich "ausfahren" bzw. "einfahren" bedeutet, haengt von der physischen Verbauung ab und ist nicht vorhersehbar. Deshalb hat jeder der 6 Gearshifts einen eigenen Richtungsmodifier unter `richtung` in `config.lua` (Standard: `1`).
+
+**Kalibrieren:** ueber die manuelle Fahrt (Menuepunkte 4/5/6) jeden Gearshift einzeln testen. Faehrt er in die falsche Richtung (z.B. "ausfahren" faehrt tatsaechlich ein), den zugehoerigen Wert in `richtung` von `1` auf `-1` aendern (oder umgekehrt) -- kein Code-Aendern noetig.
+
 ## Ablauf (Treppe -> Boden)
 
 1. Treppenmodul1 + Treppenmodul2 fahren gleichzeitig ein (Treppe1 braucht ein Signal am Treppe1-Z-Relay)
