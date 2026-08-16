@@ -57,6 +57,8 @@ Der umgekehrte Ablauf (`Boden -> Treppe`) laeuft spiegelverkehrt.
 
 Nicht jede Position hat einen eigenen Kontakt — z.B. bestaetigt das X-ausgefahren-Relay bei Treppenmodul1 gleichzeitig auch Z-eingefahren, weil beide Zustaende an der gleichen physischen Position zusammenfallen.
 
+Beim Boden wird "ausgefahren" ueber **zwei** Relais gemeinsam bestaetigt: `boden_x_ausgefahren` (Position) UND `boden_x_ausgefahren_drehkontrolle` (Drehung korrekt erfolgt). Erst wenn beide Relais gleichzeitig ein Signal geben, gilt der Boden als sicher in Endlage.
+
 ## Redstone-Signale (funktionsspezifisch)
 
 - Treppenmodul1: ein Signal fuer Z-Achsen-Bewegung (beide Richtungen)
