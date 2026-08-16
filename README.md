@@ -2,6 +2,18 @@
 
 CC:Tweaked + Create + Immersive Engineering Steuerung fuer eine verschwindende Treppe, die durch Bodenbloecke ersetzt wird.
 
+## Installation
+
+Auf dem CC:Tweaked-Computer eingeben:
+
+```
+wget run https://raw.githubusercontent.com/ItIsYe/staircase-floor-mechanism/main/installer.lua
+```
+
+Laedt `treppe_boden.lua`, `config.lua` (nur beim ersten Mal / bei fehlenden Feldern) und `startup.lua`. Danach `config.lua` mit den echten Peripheral-Namen, Redstone-Seiten, Farbkanaelen, Distanzen und der Spieler-Whitelist befuellen.
+
+**Update:** denselben Befehl (oder `installer`, falls schon vorhanden) erneut ausfuehren. `treppe_boden.lua` und `startup.lua` werden neu geladen, `config.lua` wird migriert (neue Felder ergaenzt, eigene Werte bleiben erhalten).
+
 ## Aufbau
 
 **Achsen:** Z = rauf/runter, X = vor/zurueck
@@ -12,6 +24,10 @@ CC:Tweaked + Create + Immersive Engineering Steuerung fuer eine verschwindende T
 - Boden: um 90 Grad gedreht, alles eingefahren
 
 **Module:** Treppenmodul1, Treppenmodul2, Boden — je zwei Sequenced Gearshifts (Ausfahren + Einfahren).
+
+## Redstone-Verkabelung
+
+Am Computer selbst ist nur **ein** Redstone-Input physisch verkabelt: der Trigger (`redstone_seiten.trigger`). Alle anderen Redstone-Ausgaenge (Treppe1-Z, Boden-Z, Boden-X) laufen ueber einen **Redstone Relay**-Peripheral (`redstone_relay.peripheral` in `config.lua`), nicht ueber direkte Computer-Seiten.
 
 ## Ablauf (Treppe -> Boden)
 
