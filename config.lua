@@ -12,7 +12,7 @@
 
 return {
 
-    config_version = 9,
+    config_version = 10,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -61,9 +61,15 @@ return {
             treppe1_x_ausgefahren = "redstone_relay_7",   -- = Z eingefahren
             treppe2_x_eingefahren = "redstone_relay_1",
             treppe2_x_ausgefahren = "redstone_relay_2",
-            boden_x_eingefahren   = "redstone_relay_10",
-            boden_x_ausgefahren   = "redstone_relay_9",   -- = Z unten + X ausgefahren + gedreht
-            boden_x_ausgefahren_drehkontrolle = "redstone_relay_8",  -- zusaetzliche Bestaetigung: Drehung korrekt + Position stimmt
+
+            -- Boden Grundstellung (Treppe sichtbar): X ausgefahren + Z eingefahren + nicht gedreht
+            boden_x_ausgefahren_grund = "redstone_relay_12",  -- Grundstellung: X ausgefahren
+            boden_z_kontakt           = "redstone_relay_9",   -- aktiv = Z eingefahren (Grundstellung), inaktiv = Z ausgefahren (Boden sichtbar)
+            boden_nicht_gedreht       = "redstone_relay_14",  -- Grundstellung: nicht gedreht
+
+            -- Boden sichtbar (Treppe weg): X eingefahren + Z ausgefahren (s.o. boden_z_kontakt inaktiv) + gedreht
+            boden_x_eingefahren = "redstone_relay_10",
+            boden_gedreht       = "redstone_relay_8",  -- Boden sichtbar: gedreht bestaetigt
         },
     },
 
