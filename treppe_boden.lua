@@ -257,9 +257,13 @@ end
 
 -- Solange mind. ein Whitelist-Spieler im Bereich ist: Treppe erzwingen.
 -- Verlassen alle Whitelist-Spieler den Bereich: Boden erzwingen (Treppe weg).
+-- Redstone-Trigger hat immer Vorrang: waehrend RS_TRIGGER_SIDE aktiv ist,
+-- greift die Geofence-Logik nicht ein.
 local function geofenceUeberwachung()
     while true do
-        if erlaubterSpielerImBereich() then
+        if redstone.getInput(RS_TRIGGER_SIDE) then
+            -- Redstone hat Vorrang, Geofence pausiert diesen Zyklus
+        elseif erlaubterSpielerImBereich() then
             zielzustandErzwingen("treppe")
         else
             zielzustandErzwingen("boden")
