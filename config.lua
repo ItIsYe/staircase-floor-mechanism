@@ -47,8 +47,11 @@ return {
             treppe1_x_ausgefahren = "redstone_relay_7",   -- = Z eingefahren
             treppe2_x_eingefahren = "redstone_relay_1",
             treppe2_x_ausgefahren = "redstone_relay_2",
-            boden_x_eingefahren   = "redstone_relay_8",
+            boden_x_eingefahren   = "redstone_relay_10",
             boden_x_ausgefahren   = "redstone_relay_9",   -- = Z unten + X ausgefahren + gedreht
+            -- redstone_relay_8: zusaetzliche Kontrolle ob Drehung korrekt
+            -- erfolgt ist und Boden auf Position ist -- aktuell nicht in
+            -- der Ablauflogik verdrahtet, als Reserve/manuelle Pruefung verfuegbar
         },
     },
 
