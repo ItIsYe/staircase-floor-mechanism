@@ -13,12 +13,12 @@ return {
 
     -- Peripheral-Namensfragmente (peripheral.find sucht Teilstring)
     peripherals = {
-        treppe1_ausfahren = "treppe1_ausfahren",
-        treppe1_einfahren = "treppe1_einfahren",
-        treppe2_ausfahren = "treppe2_ausfahren",
-        treppe2_einfahren = "treppe2_einfahren",
-        boden_ausfahren   = "boden_ausfahren",
-        boden_einfahren   = "boden_einfahren",
+        treppe1_ausfahren = "Create_SequencedGearshift_2",
+        treppe1_einfahren = "Create_SequencedGearshift_1",
+        treppe2_ausfahren = "Create_SequencedGearshift_4",
+        treppe2_einfahren = "Create_SequencedGearshift_3",
+        boden_ausfahren   = "Create_SequencedGearshift_6",
+        boden_einfahren   = "Create_SequencedGearshift_5",
     },
 
     -- Redstone Relais (CC:Tweaked): jedes Signal bekommt sein eigenes,
@@ -28,13 +28,13 @@ return {
     -- ist (siehe redstone_trigger unten), alles andere laeuft ueber
     -- diese Relais-Peripherals.
     redstone_relais = {
-        seite = "top",  -- gilt fuer ALLE Relais unten, Seite ist egal
+        seite = "left",  -- gilt fuer ALLE Relais unten, Seite ist egal
 
         -- Ausgaenge (Ansteuerung der Bewegung)
         ausgaenge = {
-            treppe1_z = "treppe1_z_relay",
-            boden_z   = "boden_z_relay",
-            boden_x   = "boden_x_relay",
+            treppe1_z = "redstone_relay_3",
+            boden_z   = "redstone_relay_4",
+            boden_x   = "redstone_relay_5",
         },
 
         -- Eingaenge (Positionskontakte, ersetzen den frueheren
@@ -51,7 +51,7 @@ return {
 
     -- Physischer Redstone-Input direkt am Computer (einziger, kein Relay)
     redstone_trigger = {
-        seite = "left",
+        seite = "right",
     },
 
     -- Bewegungsdistanzen in Bloecken
@@ -65,11 +65,11 @@ return {
     -- Controller fuer beide Richtungen, Treppe2/Boden = je einer pro Richtung
     geschwindigkeiten = {
         peripherals = {
-            treppe1           = "treppe1_speed",
-            treppe2_ausfahren = "treppe2_ausfahren_speed",
-            treppe2_einfahren = "treppe2_einfahren_speed",
-            boden_ausfahren   = "boden_ausfahren_speed",
-            boden_einfahren   = "boden_einfahren_speed",
+            treppe1           = "Create_RotationSpeedController_4",
+            treppe2_ausfahren = "Create_RotationSpeedController_3",
+            treppe2_einfahren = "Create_RotationSpeedController_2",
+            boden_ausfahren   = "Create_RotationSpeedController_5",
+            boden_einfahren   = "Create_RotationSpeedController_6",
         },
         -- Ziel-RPM je Controller (-256 bis 256)
         rpm = {
@@ -85,8 +85,8 @@ return {
     spieler = {
         reichweite = 5,
         erlaubte_spieler = {
-            -- "Spielername1",
-            -- "Spielername2",
+            "NXRxKing",
+            "timdax",
         },
     },
 
