@@ -49,3 +49,20 @@ Fahrgeschwindigkeit ist per Create-`Rotation Speed Controller` steuerbar, RPM-Be
 - Boden: getrennter Controller fuer Ausfahren und Einfahren
 
 Ziel-RPM werden in `config.lua` unter `geschwindigkeiten.rpm` vorbelegt, sind aber auch live im Programm unter Menuepunkt `g` abfragbar und aenderbar. Aenderungen werden in `treppe_runtime.cfg` gespeichert und bleiben bei einem Update/Installer-Lauf erhalten.
+
+## Initialisierung
+
+Beim Programmstart wird der aktuelle Zustand ueber die Redstone-Wire-Connector-Kontakte ermittelt (Treppe sichtbar vs. Boden sichtbar). Ist der Zustand nicht eindeutig bestimmbar, faehrt das Programm einmalig automatisch in die Grundstellung (Treppe sichtbar), um einen bekannten Ausgangszustand herzustellen.
+
+## Startup
+
+Der Installer schreibt zusaetzlich eine `startup.lua`, die `treppe_boden.lua` bei jedem Boot des Computers automatisch startet. Bei einem Fehler im Hauptskript wird nach 5 Sekunden automatisch neu gestartet.
+
+## Zugriffskontrolle / Geofence
+
+Statt eines reinen Ein-/Austrigger-Signals ueberwacht das Programm laufend, ob sich mindestens ein Whitelist-Spieler (siehe `spieler.erlaubte_spieler` in `config.lua`) im konfigurierten Bereich (`spieler.reichweite`, Bloecke um den Player Detector) befindet:
+
+- Ist ein Whitelist-Spieler im Bereich: Treppe wird erzwungen (sichtbar)
+- Verlassen alle Whitelist-Spieler den Bereich: Boden wird erzwungen (Treppe verschwindet)
+
+Zusaetzlich bleibt ein manueller Redstone-Trigger (`redstone_seiten.trigger`) als Toggle-Override erhalten, z.B. fuer Tests oder Notfallsteuerung.
