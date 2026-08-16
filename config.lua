@@ -9,7 +9,7 @@
 
 return {
 
-    config_version = 1,
+    config_version = 2,
 
     -- Peripheral-Namensfragmente (peripheral.find sucht Teilstring)
     peripherals = {
@@ -26,6 +26,26 @@ return {
         treppe1 = 4,
         treppe2 = 4,
         boden   = 2,
+    },
+
+    -- Rotation Speed Controller (Create): Treppe1 = ein gemeinsamer
+    -- Controller fuer beide Richtungen, Treppe2/Boden = je einer pro Richtung
+    geschwindigkeiten = {
+        peripherals = {
+            treppe1           = "treppe1_speed",
+            treppe2_ausfahren = "treppe2_ausfahren_speed",
+            treppe2_einfahren = "treppe2_einfahren_speed",
+            boden_ausfahren   = "boden_ausfahren_speed",
+            boden_einfahren   = "boden_einfahren_speed",
+        },
+        -- Ziel-RPM je Controller (-256 bis 256)
+        rpm = {
+            treppe1           = 32,
+            treppe2_ausfahren = 32,
+            treppe2_einfahren = 32,
+            boden_ausfahren   = 16,
+            boden_einfahren   = 16,
+        },
     },
 
     -- Redstone-Wire-Connector Farbkanaele (Immersive Engineering)
