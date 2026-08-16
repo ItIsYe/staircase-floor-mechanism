@@ -1,6 +1,6 @@
 # staircase-floor-mechanism
 
-CC:Tweaked + Create + Immersive Engineering Steuerung fuer eine verschwindende Treppe, die durch Bodenbloecke ersetzt wird.
+CC:Tweaked + Create Steuerung fuer eine verschwindende Treppe, die durch Bodenbloecke ersetzt wird.
 
 ## Installation
 
@@ -10,7 +10,7 @@ Auf dem CC:Tweaked-Computer eingeben:
 wget run https://raw.githubusercontent.com/ItIsYe/staircase-floor-mechanism/main/installer.lua
 ```
 
-Laedt `treppe_boden.lua`, `config.lua` (nur beim ersten Mal / bei fehlenden Feldern) und `startup.lua`. Danach `config.lua` mit den echten Peripheral-Namen, Redstone-Seiten, Farbkanaelen, Distanzen und der Spieler-Whitelist befuellen.
+Laedt `treppe_boden.lua`, `config.lua` (nur beim ersten Mal / bei fehlenden Feldern) und `startup.lua`. Danach `config.lua` mit den echten Peripheral-Namen, Relay-Namen, Distanzen und der Spieler-Whitelist befuellen.
 
 **Update:** denselben Befehl (oder `installer`, falls schon vorhanden) erneut ausfuehren. `treppe_boden.lua` und `startup.lua` werden neu geladen, `config.lua` wird migriert (neue Felder ergaenzt, eigene Werte bleiben erhalten).
 
@@ -27,34 +27,31 @@ Laedt `treppe_boden.lua`, `config.lua` (nur beim ersten Mal / bei fehlenden Feld
 
 ## Redstone-Verkabelung
 
-Am Computer selbst ist nur **ein** Redstone-Input physisch verkabelt: der Trigger (`redstone_seiten.trigger`). Alle anderen Redstone-Ausgaenge (Treppe1-Z, Boden-Z, Boden-X) laufen ueber einen **Redstone Relay**-Peripheral (`redstone_relay.peripheral` in `config.lua`), nicht ueber direkte Computer-Seiten.
+Am Computer selbst ist nur **ein** Redstone-Input physisch verkabelt: der Trigger (`redstone_trigger.seite` in `config.lua`).
+
+Alles andere laeuft ueber **dedizierte Redstone-Relais** (`redstone_relais` in `config.lua`) — pro Signal ein eigenes Relay-Peripheral:
+
+- **Ausgaenge** (Ansteuerung der Bewegung): Treppe1-Z, Boden-Z, Boden-X
+- **Eingaenge** (Positionskontakte): je ein Relay fuer "eingefahren" und "ausgefahren" bei Treppe1, Treppe2 und Boden (6 Relais gesamt)
+
+Da jedes Relay nur ein einziges Signal traegt, ist die genutzte Seite am jeweiligen Relay beliebig — `redstone_relais.seite` gilt einheitlich fuer alle. Es gibt keinen Redstone Wire Connector und keine Farbkanaele mehr.
 
 ## Ablauf (Treppe -> Boden)
 
-1. Treppenmodul1 + Treppenmodul2 fahren gleichzeitig ein (Treppe1 braucht Redstone-Signal fuer Z-Achse)
-2. Erst wenn beide Treppenmodule in Endlage sind: Boden faehrt aus (inkl. Drehung, gesteuert ueber Z- und X-Signal gemeinsam)
+1. Treppenmodul1 + Treppenmodul2 fahren gleichzeitig ein (Treppe1 braucht ein Signal am Treppe1-Z-Relay)
+2. Erst wenn beide Treppenmodule per Relay-Kontakt bestaetigt in Endlage sind: Boden faehrt aus (inkl. Drehung, gesteuert ueber Boden-Z- und Boden-X-Relay gemeinsam)
 
-Der umgekehrte Ablauf laeuft spiegelverkehrt.
+Der umgekehrte Ablauf (`Boden -> Treppe`) laeuft spiegelverkehrt.
 
 ## Positionserkennung
 
-Kein Redstone Integrator (Seiten-Limit), stattdessen Immersive-Engineering-**Redstone Wire Connector** mit Farbkanaelen. Ein zentraler Connector am Computer liest per `getRedstoneForChannel(color)` alle Endpositionen aus. Nicht jede Position hat einen Kontakt — z.B. bestaetigt der X-ausgefahren-Kontakt bei Treppenmodul1 gleichzeitig auch Z-eingefahren.
+Nicht jede Position hat einen eigenen Kontakt — z.B. bestaetigt das X-ausgefahren-Relay bei Treppenmodul1 gleichzeitig auch Z-eingefahren, weil beide Zustaende an der gleichen physischen Position zusammenfallen.
 
 ## Redstone-Signale (funktionsspezifisch)
 
 - Treppenmodul1: ein Signal fuer Z-Achsen-Bewegung (beide Richtungen)
 - Treppenmodul2: kein Redstone noetig
 - Boden: ein Signal fuer Z-Achse, ein Signal fuer X-Achse — Drehung braucht beide gleichzeitig, erfolgt aber erst wenn Z unten und X ausgefahren ist (intern im Gearshift-Sequenzeditor programmiert)
-
-## Auslösung
-
-- Redstone-Seite (fest verkabelt)
-- Player Detector (Advanced Peripherals) — nur erlaubte Spieler in `ERLAUBTE_SPIELER` loesen aus
-- Beide Trigger togglen automatisch zwischen Verschwinden/Herstellen je nach aktuellem Zustand
-
-## Status
-
-Konzept vollstaendig, Skript-Erstversion vorhanden. Peripheral-Namen, Redstone-Seiten, Farbkanaele und Distanzen sind Platzhalter und muessen an die tatsaechliche Verkabelung angepasst werden. Noch keine In-Game-Tests durchgefuehrt.
 
 ## Geschwindigkeiten (Rotation Speed Controller)
 
@@ -68,21 +65,22 @@ Ziel-RPM werden in `config.lua` unter `geschwindigkeiten.rpm` vorbelegt, sind ab
 
 ## Initialisierung
 
-Beim Programmstart wird der aktuelle Zustand ueber die Redstone-Wire-Connector-Kontakte ermittelt (Treppe sichtbar vs. Boden sichtbar). Ist der Zustand nicht eindeutig bestimmbar, faehrt das Programm einmalig automatisch in die Grundstellung (Treppe sichtbar), um einen bekannten Ausgangszustand herzustellen.
+Beim Programmstart wird der aktuelle Zustand ueber die Relay-Kontakte ermittelt (Treppe sichtbar vs. Boden sichtbar). Ist der Zustand nicht eindeutig bestimmbar, faehrt das Programm einmalig automatisch in die Grundstellung (Treppe sichtbar), um einen bekannten Ausgangszustand herzustellen.
 
 ## Startup
 
 Der Installer schreibt zusaetzlich eine `startup.lua`, die `treppe_boden.lua` bei jedem Boot des Computers automatisch startet. Bei einem Fehler im Hauptskript wird nach 5 Sekunden automatisch neu gestartet.
 
-## Zugriffskontrolle / Geofence
+## Auslösung
 
-Statt eines reinen Ein-/Austrigger-Signals ueberwacht das Programm laufend, ob sich mindestens ein Whitelist-Spieler (siehe `spieler.erlaubte_spieler` in `config.lua`) im konfigurierten Bereich (`spieler.reichweite`, Bloecke um den Player Detector) befindet:
-
-- Ist ein Whitelist-Spieler im Bereich: Treppe wird erzwungen (sichtbar)
-- Verlassen alle Whitelist-Spieler den Bereich: Boden wird erzwungen (Treppe verschwindet)
-
-Zusaetzlich bleibt ein manueller Redstone-Trigger (`redstone_seiten.trigger`) als Toggle-Override erhalten, z.B. fuer Tests oder Notfallsteuerung.
+- **Redstone-Trigger** (physischer Input am Computer): steigende Flanke togglet den Zustand, hat immer Vorrang vor der Geofence-Logik
+- **Geofence / Player Detector** (Advanced Peripherals): solange mindestens ein Whitelist-Spieler (`spieler.erlaubte_spieler` in `config.lua`) im konfigurierten Bereich (`spieler.reichweite`) ist, wird die Treppe erzwungen; verlassen alle Whitelist-Spieler den Bereich, wird der Boden erzwungen (Treppe verschwindet)
+- **Manuell** ueber die UI (Menuepunkte 4/5/6 fuer einzelne Module, 9 fuer den kompletten Toggle-Ablauf)
 
 ## Verriegelung
 
-Bevor eine neue Bewegung startet -- automatisch (Redstone/Geofence) oder manuell -- prueft das Programm per Kontakt, ob das System vollstaendig in einer bekannten Endlage steht (alle Module bestaetigt aus- oder eingefahren, passend zum aktuell gespeicherten Zustand). Laeuft bereits eine Bewegung oder ist der Zustand nicht eindeutig, wird die neue Aktion verweigert, statt Bewegungen zu ueberlappen.
+Bevor eine neue Bewegung startet — automatisch (Redstone/Geofence) oder manuell — prueft das Programm per Relay-Kontakt, ob das System vollstaendig in einer bekannten Endlage steht (alle Module bestaetigt aus- oder eingefahren, passend zum aktuell gespeicherten Zustand). Laeuft bereits eine Bewegung oder ist der Zustand nicht eindeutig, wird die neue Aktion verweigert, statt Bewegungen zu ueberlappen.
+
+## Status
+
+Konzept vollstaendig, Skript-Version mit Relais-Architektur vorhanden. Peripheral-Namen, Relay-Namen, Distanzen und Farbwerte sind Platzhalter und muessen an die tatsaechliche Verkabelung angepasst werden. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
