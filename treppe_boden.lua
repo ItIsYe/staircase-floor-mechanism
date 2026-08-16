@@ -98,6 +98,13 @@ local treppe2_ein = findGearshift(cfg.peripherals.treppe2_einfahren)
 local boden_aus   = findGearshift(cfg.peripherals.boden_ausfahren)
 local boden_ein   = findGearshift(cfg.peripherals.boden_einfahren)
 
+local RICHTUNG_T1_AUS = cfg.richtung.treppe1_ausfahren
+local RICHTUNG_T1_EIN = cfg.richtung.treppe1_einfahren
+local RICHTUNG_T2_AUS = cfg.richtung.treppe2_ausfahren
+local RICHTUNG_T2_EIN = cfg.richtung.treppe2_einfahren
+local RICHTUNG_B_AUS  = cfg.richtung.boden_ausfahren
+local RICHTUNG_B_EIN  = cfg.richtung.boden_einfahren
+
 local speed_treppe1           = findSpeedController(cfg.geschwindigkeiten.peripherals.treppe1)
 local speed_treppe2_ausfahren = findSpeedController(cfg.geschwindigkeiten.peripherals.treppe2_ausfahren)
 local speed_treppe2_einfahren = findSpeedController(cfg.geschwindigkeiten.peripherals.treppe2_einfahren)
@@ -209,10 +216,10 @@ local function warteAufRelay(inputRelay, zielZustand)
     return true
 end
 
-local function bodenBewegen(gearshift, distanz, zielRelay)
+local function bodenBewegen(gearshift, distanz, richtung, zielRelay)
     relaisSetzen(relay_boden_z, true)
     relaisSetzen(relay_boden_x, true)
-    gearshift.move(distanz, 1)
+    gearshift.move(distanz, richtung)
     warteAufRelay(zielRelay, true)
     relaisSetzen(relay_boden_z, false)
     relaisSetzen(relay_boden_x, false)
@@ -224,24 +231,24 @@ end
 
 local function treppeVerschwinden()
     relaisSetzen(relay_treppe1_z, true)
-    treppe1_ein.move(runtime.treppe1, 1)
-    treppe2_ein.move(runtime.treppe2, 1)
+    treppe1_ein.move(runtime.treppe1, RICHTUNG_T1_EIN)
+    treppe2_ein.move(runtime.treppe2, RICHTUNG_T2_EIN)
 
     warteAufRelay(relay_t1_x_ein, true)
     warteAufRelay(relay_t2_x_ein, true)
     relaisSetzen(relay_treppe1_z, false)
 
-    bodenBewegen(boden_aus, runtime.boden, relay_b_x_aus_bestaetigt)
+    bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_b_x_aus_bestaetigt)
 
     zustand = "boden"
 end
 
 local function treppeHerstellen()
-    bodenBewegen(boden_ein, runtime.boden, relay_b_x_ein)
+    bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_b_x_ein)
 
     relaisSetzen(relay_treppe1_z, true)
-    treppe1_aus.move(runtime.treppe1, 1)
-    treppe2_aus.move(runtime.treppe2, 1)
+    treppe1_aus.move(runtime.treppe1, RICHTUNG_T1_AUS)
+    treppe2_aus.move(runtime.treppe2, RICHTUNG_T2_AUS)
 
     warteAufRelay(relay_t1_x_aus, true)
     warteAufRelay(relay_t2_x_aus, true)
@@ -443,8 +450,8 @@ local function treppe1Manuell()
     write("> ")
     local r = read()
     relaisSetzen(relay_treppe1_z, true)
-    if r == "a" then treppe1_aus.move(runtime.treppe1, 1)
-    elseif r == "e" then treppe1_ein.move(runtime.treppe1, 1) end
+    if r == "a" then treppe1_aus.move(runtime.treppe1, RICHTUNG_T1_AUS)
+    elseif r == "e" then treppe1_ein.move(runtime.treppe1, RICHTUNG_T1_EIN) end
     relaisSetzen(relay_treppe1_z, false)
     verriegelungFreigeben()
 end
@@ -458,8 +465,8 @@ local function treppe2Manuell()
     print("Treppe2: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    if r == "a" then treppe2_aus.move(runtime.treppe2, 1)
-    elseif r == "e" then treppe2_ein.move(runtime.treppe2, 1) end
+    if r == "a" then treppe2_aus.move(runtime.treppe2, RICHTUNG_T2_AUS)
+    elseif r == "e" then treppe2_ein.move(runtime.treppe2, RICHTUNG_T2_EIN) end
     verriegelungFreigeben()
 end
 
@@ -472,8 +479,8 @@ local function bodenManuell()
     print("Boden: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    if r == "a" then bodenBewegen(boden_aus, runtime.boden, relay_b_x_aus_bestaetigt)
-    elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, relay_b_x_ein) end
+    if r == "a" then bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_b_x_aus_bestaetigt)
+    elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_b_x_ein) end
     verriegelungFreigeben()
 end
 
