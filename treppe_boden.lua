@@ -87,6 +87,18 @@ local speed_boden_ausfahren   = findSpeedController(cfg.geschwindigkeiten.periph
 local speed_boden_einfahren   = findSpeedController(cfg.geschwindigkeiten.peripherals.boden_einfahren)
 
 local connector = peripheral.find("redstoneWireConnector")
+if not connector then
+    connector = peripheral.find("redstone_wire_connector")
+end
+if not connector then
+    print("FEHLER: Redstone Wire Connector nicht gefunden.")
+    print("Vorhandene Peripherals:")
+    for _, name in ipairs(peripheral.getNames()) do
+        print("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
+    end
+    error("Bitte config.lua/Code mit dem richtigen Peripheral-Typnamen aktualisieren.")
+end
+
 local playerDetector = peripheral.find("playerDetector")
 
 local CH_T1_X_EIN = cfg.farbkanaele.treppe1_x_eingefahren
