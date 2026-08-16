@@ -1,7 +1,11 @@
 -- ============================================
 -- Treppen-/Boden-Mechanismus
--- CC:Tweaked + Create + Immersive Engineering (Redstone Wire Connector)
--- Advanced Peripherals (Player Detector)
+-- CC:Tweaked + Create + Advanced Peripherals (Player Detector)
+--
+-- Alle Redstone-Signale (Ausgaenge UND Positionskontakte) laufen ueber
+-- dedizierte Redstone-Relais -- ein Relay pro Signal, Seite am Relay egal.
+-- Einzige Ausnahme: der Trigger ist der einzige physisch am Computer
+-- verkabelte Redstone-Input.
 --
 -- Alle Einstellungen kommen aus config.lua -- diese Datei nicht bearbeiten,
 -- stattdessen config.lua anpassen.
@@ -73,6 +77,21 @@ local function findSpeedController(fragment)
     return p
 end
 
+local function findRelay(fragment)
+    local p = peripheral.find("redstone_relay", function(name)
+        return string.find(name, fragment) ~= nil
+    end)
+    if not p then
+        print("FEHLER: Redstone Relay '" .. fragment .. "' nicht gefunden.")
+        print("Vorhandene Peripherals:")
+        for _, name in ipairs(peripheral.getNames()) do
+            print("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
+        end
+        error("Bitte config.lua mit den richtigen Relay-Namen aktualisieren.")
+    end
+    return p
+end
+
 local treppe1_aus = findGearshift(cfg.peripherals.treppe1_ausfahren)
 local treppe1_ein = findGearshift(cfg.peripherals.treppe1_einfahren)
 local treppe2_aus = findGearshift(cfg.peripherals.treppe2_ausfahren)
@@ -86,67 +105,53 @@ local speed_treppe2_einfahren = findSpeedController(cfg.geschwindigkeiten.periph
 local speed_boden_ausfahren   = findSpeedController(cfg.geschwindigkeiten.peripherals.boden_ausfahren)
 local speed_boden_einfahren   = findSpeedController(cfg.geschwindigkeiten.peripherals.boden_einfahren)
 
-local connector = peripheral.find("redstoneWireConnector")
-if not connector then
-    connector = peripheral.find("redstone_wire_connector")
-end
-if not connector then
-    print("FEHLER: Redstone Wire Connector nicht gefunden.")
-    print("Vorhandene Peripherals:")
-    for _, name in ipairs(peripheral.getNames()) do
-        print("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
-    end
-    error("Bitte config.lua/Code mit dem richtigen Peripheral-Typnamen aktualisieren.")
-end
+-- Ausgangs-Relais (Ansteuerung)
+local relay_treppe1_z = findRelay(cfg.redstone_relais.ausgaenge.treppe1_z)
+local relay_boden_z   = findRelay(cfg.redstone_relais.ausgaenge.boden_z)
+local relay_boden_x   = findRelay(cfg.redstone_relais.ausgaenge.boden_x)
 
-local relay = peripheral.find(cfg.redstone_relay.peripheral)
-if not relay then
-    print("FEHLER: Redstone Relay ('" .. cfg.redstone_relay.peripheral .. "') nicht gefunden.")
-    print("Vorhandene Peripherals:")
-    for _, name in ipairs(peripheral.getNames()) do
-        print("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
-    end
-    error("Bitte config.lua/Code mit dem richtigen Peripheral-Typnamen aktualisieren.")
-end
+-- Eingangs-Relais (Positionskontakte)
+local relay_t1_x_ein = findRelay(cfg.redstone_relais.eingaenge.treppe1_x_eingefahren)
+local relay_t1_x_aus = findRelay(cfg.redstone_relais.eingaenge.treppe1_x_ausgefahren)
+local relay_t2_x_ein = findRelay(cfg.redstone_relais.eingaenge.treppe2_x_eingefahren)
+local relay_t2_x_aus = findRelay(cfg.redstone_relais.eingaenge.treppe2_x_ausgefahren)
+local relay_b_x_ein  = findRelay(cfg.redstone_relais.eingaenge.boden_x_eingefahren)
+local relay_b_x_aus  = findRelay(cfg.redstone_relais.eingaenge.boden_x_ausgefahren)
+
+local RELAY_SEITE = cfg.redstone_relais.seite
 
 local playerDetector = peripheral.find("playerDetector")
 
-local CH_T1_X_EIN = cfg.farbkanaele.treppe1_x_eingefahren
-local CH_T1_X_AUS = cfg.farbkanaele.treppe1_x_ausgefahren
-local CH_T2_X_EIN = cfg.farbkanaele.treppe2_x_eingefahren
-local CH_T2_X_AUS = cfg.farbkanaele.treppe2_x_ausgefahren
-local CH_B_X_EIN  = cfg.farbkanaele.boden_x_eingefahren
-local CH_B_X_AUS  = cfg.farbkanaele.boden_x_ausgefahren
-
-local RS_TREPPE1_Z_SIDE = cfg.redstone_seiten.treppe1_z
-local RS_BODEN_Z_SIDE   = cfg.redstone_seiten.boden_z
-local RS_BODEN_X_SIDE   = cfg.redstone_seiten.boden_x
-local RS_TRIGGER_SIDE   = cfg.redstone_seiten.trigger
+local RS_TRIGGER_SIDE = cfg.redstone_trigger.seite
 
 local PLAYER_RANGE = cfg.spieler.reichweite
 local ERLAUBTE_SPIELER = cfg.spieler.erlaubte_spieler
 
 local TIMEOUT_S = cfg.timeout_sekunden
-local zustand = nil   -- wird bei der Initialisierung gesetzt: "treppe" oder "boden"
-local verriegelt = false  -- true waehrend irgendeine Bewegung laeuft -- blockiert alles andere
+local zustand = nil
+local verriegelt = false
 
-local function kanalAn(kanal)
-    return connector.getRedstoneForChannel(kanal) > 0
+-- ============================================
+-- Relais-Hilfsfunktionen
+-- ============================================
+
+local function relaisAn(inputRelay)
+    return inputRelay.getInput(RELAY_SEITE)
 end
 
--- Prueft per Kontakt, ob ALLE Module tatsaechlich in der zu 'zustand' passenden
--- Endlage stehen. Nur wenn true, darf die naechste Aktion gestartet werden.
+local function relaisSetzen(outputRelay, an)
+    outputRelay.setOutput(RELAY_SEITE, an)
+end
+
 local function inEndlage()
     if zustand == "treppe" then
-        return kanalAn(CH_T1_X_AUS) and kanalAn(CH_T2_X_AUS) and kanalAn(CH_B_X_EIN)
+        return relaisAn(relay_t1_x_aus) and relaisAn(relay_t2_x_aus) and relaisAn(relay_b_x_ein)
     elseif zustand == "boden" then
-        return kanalAn(CH_T1_X_EIN) and kanalAn(CH_T2_X_EIN) and kanalAn(CH_B_X_AUS)
+        return relaisAn(relay_t1_x_ein) and relaisAn(relay_t2_x_ein) and relaisAn(relay_b_x_aus)
     end
     return false
 end
 
--- Versucht die Verriegelung zu bekommen. Gibt false zurueck, wenn bereits
--- eine Bewegung laeuft oder das System nicht nachweislich in Endlage ist.
 local function verriegelungAnfordern()
     if verriegelt then return false end
     if not inEndlage() then return false end
@@ -185,9 +190,9 @@ end
 -- Hilfsfunktionen
 -- ============================================
 
-local function warteAufKanal(kanal, zielZustand)
+local function warteAufRelay(inputRelay, zielZustand)
     local start = os.clock()
-    while connector.getRedstoneForChannel(kanal) > 0 ~= zielZustand do
+    while relaisAn(inputRelay) ~= zielZustand do
         if os.clock() - start > TIMEOUT_S then
             return false
         end
@@ -196,13 +201,13 @@ local function warteAufKanal(kanal, zielZustand)
     return true
 end
 
-local function bodenBewegen(gearshift, distanz, zielKanal)
-    relay.setOutput(RS_BODEN_Z_SIDE, true)
-    relay.setOutput(RS_BODEN_X_SIDE, true)
+local function bodenBewegen(gearshift, distanz, zielRelay)
+    relaisSetzen(relay_boden_z, true)
+    relaisSetzen(relay_boden_x, true)
     gearshift.move(distanz, 1)
-    warteAufKanal(zielKanal, true)
-    relay.setOutput(RS_BODEN_Z_SIDE, false)
-    relay.setOutput(RS_BODEN_X_SIDE, false)
+    warteAufRelay(zielRelay, true)
+    relaisSetzen(relay_boden_z, false)
+    relaisSetzen(relay_boden_x, false)
 end
 
 -- ============================================
@@ -210,29 +215,29 @@ end
 -- ============================================
 
 local function treppeVerschwinden()
-    relay.setOutput(RS_TREPPE1_Z_SIDE, true)
+    relaisSetzen(relay_treppe1_z, true)
     treppe1_ein.move(runtime.treppe1, 1)
     treppe2_ein.move(runtime.treppe2, 1)
 
-    warteAufKanal(CH_T1_X_EIN, true)
-    warteAufKanal(CH_T2_X_EIN, true)
-    relay.setOutput(RS_TREPPE1_Z_SIDE, false)
+    warteAufRelay(relay_t1_x_ein, true)
+    warteAufRelay(relay_t2_x_ein, true)
+    relaisSetzen(relay_treppe1_z, false)
 
-    bodenBewegen(boden_aus, runtime.boden, CH_B_X_AUS)
+    bodenBewegen(boden_aus, runtime.boden, relay_b_x_aus)
 
     zustand = "boden"
 end
 
 local function treppeHerstellen()
-    bodenBewegen(boden_ein, runtime.boden, CH_B_X_EIN)
+    bodenBewegen(boden_ein, runtime.boden, relay_b_x_ein)
 
-    relay.setOutput(RS_TREPPE1_Z_SIDE, true)
+    relaisSetzen(relay_treppe1_z, true)
     treppe1_aus.move(runtime.treppe1, 1)
     treppe2_aus.move(runtime.treppe2, 1)
 
-    warteAufKanal(CH_T1_X_AUS, true)
-    warteAufKanal(CH_T2_X_AUS, true)
-    relay.setOutput(RS_TREPPE1_Z_SIDE, false)
+    warteAufRelay(relay_t1_x_aus, true)
+    warteAufRelay(relay_t2_x_aus, true)
+    relaisSetzen(relay_treppe1_z, false)
 
     zustand = "treppe"
 end
@@ -248,7 +253,6 @@ local function ausloesen()
     return true
 end
 
--- Erzwingt einen bestimmten Zielzustand (fuer Geofence-Logik, kein Toggle)
 local function zielzustandErzwingen(ziel)
     if zustand == ziel then return end
     if not verriegelungAnfordern() then return end
@@ -261,14 +265,14 @@ local function zielzustandErzwingen(ziel)
 end
 
 -- ============================================
--- Initialisierung: Zustand beim Start ermitteln
+-- Initialisierung
 -- ============================================
 
 local function zustandInitialisieren()
-    print("Initialisiere Zustand ueber Kontakte ...")
+    print("Initialisiere Zustand ueber Relais-Kontakte ...")
 
-    local treppeErkannt = kanalAn(CH_T1_X_AUS) and kanalAn(CH_T2_X_AUS) and kanalAn(CH_B_X_EIN)
-    local bodenErkannt  = kanalAn(CH_T1_X_EIN) and kanalAn(CH_T2_X_EIN) and kanalAn(CH_B_X_AUS)
+    local treppeErkannt = relaisAn(relay_t1_x_aus) and relaisAn(relay_t2_x_aus) and relaisAn(relay_b_x_ein)
+    local bodenErkannt  = relaisAn(relay_t1_x_ein) and relaisAn(relay_t2_x_ein) and relaisAn(relay_b_x_aus)
 
     if treppeErkannt and not bodenErkannt then
         zustand = "treppe"
@@ -278,10 +282,10 @@ local function zustandInitialisieren()
         print("Zustand erkannt: Boden sichtbar")
     else
         print("Zustand nicht eindeutig -- fahre einmalig in Grundstellung (Treppe)")
-        zustand = "boden"  -- erzwingt treppeHerstellen() unten
-        relay.setOutput(RS_TREPPE1_Z_SIDE, false)
-        relay.setOutput(RS_BODEN_Z_SIDE, false)
-        relay.setOutput(RS_BODEN_X_SIDE, false)
+        zustand = "boden"
+        relaisSetzen(relay_treppe1_z, false)
+        relaisSetzen(relay_boden_z, false)
+        relaisSetzen(relay_boden_x, false)
         treppeHerstellen()
     end
 end
@@ -300,14 +304,10 @@ local function erlaubterSpielerImBereich()
     return false
 end
 
--- Solange mind. ein Whitelist-Spieler im Bereich ist: Treppe erzwingen.
--- Verlassen alle Whitelist-Spieler den Bereich: Boden erzwingen (Treppe weg).
--- Redstone-Trigger hat immer Vorrang: waehrend RS_TRIGGER_SIDE aktiv ist,
--- greift die Geofence-Logik nicht ein.
 local function geofenceUeberwachung()
     while true do
         if redstone.getInput(RS_TRIGGER_SIDE) then
-            -- Redstone hat Vorrang, Geofence pausiert diesen Zyklus
+            -- Redstone hat Vorrang
         elseif erlaubterSpielerImBereich() then
             zielzustandErzwingen("treppe")
         else
@@ -317,7 +317,6 @@ local function geofenceUeberwachung()
     end
 end
 
--- Manueller Redstone-Trigger bleibt als Override erhalten (Toggle)
 local function redstoneTriggerUeberwachung()
     local letzterRSZustand = redstone.getInput(RS_TRIGGER_SIDE)
     while true do
@@ -435,10 +434,10 @@ local function treppe1Manuell()
     print("Treppe1: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    relay.setOutput(RS_TREPPE1_Z_SIDE, true)
+    relaisSetzen(relay_treppe1_z, true)
     if r == "a" then treppe1_aus.move(runtime.treppe1, 1)
     elseif r == "e" then treppe1_ein.move(runtime.treppe1, 1) end
-    relay.setOutput(RS_TREPPE1_Z_SIDE, false)
+    relaisSetzen(relay_treppe1_z, false)
     verriegelungFreigeben()
 end
 
@@ -465,8 +464,8 @@ local function bodenManuell()
     print("Boden: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    if r == "a" then bodenBewegen(boden_aus, runtime.boden, CH_B_X_AUS)
-    elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, CH_B_X_EIN) end
+    if r == "a" then bodenBewegen(boden_aus, runtime.boden, relay_b_x_aus)
+    elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, relay_b_x_ein) end
     verriegelungFreigeben()
 end
 
