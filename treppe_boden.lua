@@ -24,6 +24,12 @@ local runtime = {
     treppe1 = cfg.distanzen.treppe1,
     treppe2 = cfg.distanzen.treppe2,
     boden   = cfg.distanzen.boden,
+
+    rpm_treppe1           = cfg.geschwindigkeiten.rpm.treppe1,
+    rpm_treppe2_ausfahren  = cfg.geschwindigkeiten.rpm.treppe2_ausfahren,
+    rpm_treppe2_einfahren  = cfg.geschwindigkeiten.rpm.treppe2_einfahren,
+    rpm_boden_ausfahren    = cfg.geschwindigkeiten.rpm.boden_ausfahren,
+    rpm_boden_einfahren    = cfg.geschwindigkeiten.rpm.boden_einfahren,
 }
 
 local function ladeRuntime()
@@ -57,12 +63,28 @@ local function findGearshift(fragment)
     return p
 end
 
+local function findSpeedController(fragment)
+    local p = peripheral.find("Create_RotationSpeedController", function(name)
+        return string.find(name, fragment) ~= nil
+    end)
+    if not p then
+        print("WARNUNG: Rotation Speed Controller '" .. fragment .. "' nicht gefunden")
+    end
+    return p
+end
+
 local treppe1_aus = findGearshift(cfg.peripherals.treppe1_ausfahren)
 local treppe1_ein = findGearshift(cfg.peripherals.treppe1_einfahren)
 local treppe2_aus = findGearshift(cfg.peripherals.treppe2_ausfahren)
 local treppe2_ein = findGearshift(cfg.peripherals.treppe2_einfahren)
 local boden_aus   = findGearshift(cfg.peripherals.boden_ausfahren)
 local boden_ein   = findGearshift(cfg.peripherals.boden_einfahren)
+
+local speed_treppe1           = findSpeedController(cfg.geschwindigkeiten.peripherals.treppe1)
+local speed_treppe2_ausfahren = findSpeedController(cfg.geschwindigkeiten.peripherals.treppe2_ausfahren)
+local speed_treppe2_einfahren = findSpeedController(cfg.geschwindigkeiten.peripherals.treppe2_einfahren)
+local speed_boden_ausfahren   = findSpeedController(cfg.geschwindigkeiten.peripherals.boden_ausfahren)
+local speed_boden_einfahren   = findSpeedController(cfg.geschwindigkeiten.peripherals.boden_einfahren)
 
 local connector = peripheral.find("redstoneWireConnector")
 local playerDetector = peripheral.find("playerDetector")
@@ -85,6 +107,31 @@ local ERLAUBTE_SPIELER = cfg.spieler.erlaubte_spieler
 local TIMEOUT_S = cfg.timeout_sekunden
 local zustand = "treppe"
 local ablaufLaeuft = false
+
+-- ============================================
+-- Geschwindigkeiten anwenden/lesen
+-- ============================================
+
+local function geschwindigkeitSetzen(controller, rpm)
+    if not controller then return false end
+    controller.setTargetSpeed(rpm)
+    return true
+end
+
+local function geschwindigkeitLesen(controller)
+    if not controller then return nil end
+    return controller.getTargetSpeed()
+end
+
+-- Wendet alle in runtime gespeicherten RPM-Werte auf die Controller an.
+-- Wird beim Start aufgerufen, damit gespeicherte Aenderungen wirksam werden.
+local function alleGeschwindigkeitenAnwenden()
+    geschwindigkeitSetzen(speed_treppe1, runtime.rpm_treppe1)
+    geschwindigkeitSetzen(speed_treppe2_ausfahren, runtime.rpm_treppe2_ausfahren)
+    geschwindigkeitSetzen(speed_treppe2_einfahren, runtime.rpm_treppe2_einfahren)
+    geschwindigkeitSetzen(speed_boden_ausfahren, runtime.rpm_boden_ausfahren)
+    geschwindigkeitSetzen(speed_boden_einfahren, runtime.rpm_boden_einfahren)
+end
 
 -- ============================================
 -- Hilfsfunktionen
@@ -204,6 +251,9 @@ local function zeichneUI()
     print("2) Treppe2: " .. runtime.treppe2)
     print("3) Boden:   " .. runtime.boden)
     print("")
+    print("-- Geschwindigkeiten (RPM) --")
+    print("g) Geschwindigkeiten anzeigen/aendern")
+    print("")
     print("-- Manuelle Fahrt --")
     print("4) Treppe1 manuell")
     print("5) Treppe2 manuell")
@@ -220,6 +270,66 @@ local function zahlEingabe(prompt, alt)
     local eingabe = read()
     local n = tonumber(eingabe)
     return n or alt
+end
+
+local function rpmEingabe(prompt, alt)
+    write(prompt .. " RPM, -256 bis 256 (" .. alt .. "): ")
+    local eingabe = read()
+    local n = tonumber(eingabe)
+    if n then
+        if n > 256 then n = 256 end
+        if n < -256 then n = -256 end
+        return n
+    end
+    return alt
+end
+
+local function geschwindigkeitenMenu()
+    while true do
+        term.clear()
+        term.setCursorPos(1, 1)
+        print("=== Geschwindigkeiten (RPM) ===")
+        print("")
+        print("1) Treppe1 (gemeinsam):   Soll " .. runtime.rpm_treppe1 ..
+              "  Ist " .. tostring(geschwindigkeitLesen(speed_treppe1)))
+        print("2) Treppe2 ausfahren:     Soll " .. runtime.rpm_treppe2_ausfahren ..
+              "  Ist " .. tostring(geschwindigkeitLesen(speed_treppe2_ausfahren)))
+        print("3) Treppe2 einfahren:     Soll " .. runtime.rpm_treppe2_einfahren ..
+              "  Ist " .. tostring(geschwindigkeitLesen(speed_treppe2_einfahren)))
+        print("4) Boden ausfahren:       Soll " .. runtime.rpm_boden_ausfahren ..
+              "  Ist " .. tostring(geschwindigkeitLesen(speed_boden_ausfahren)))
+        print("5) Boden einfahren:       Soll " .. runtime.rpm_boden_einfahren ..
+              "  Ist " .. tostring(geschwindigkeitLesen(speed_boden_einfahren)))
+        print("")
+        print("0) Zurueck")
+        print("")
+        write("Auswahl: ")
+        local auswahl = read()
+
+        if auswahl == "1" then
+            runtime.rpm_treppe1 = rpmEingabe("Treppe1", runtime.rpm_treppe1)
+            geschwindigkeitSetzen(speed_treppe1, runtime.rpm_treppe1)
+            speichereRuntime()
+        elseif auswahl == "2" then
+            runtime.rpm_treppe2_ausfahren = rpmEingabe("Treppe2 ausfahren", runtime.rpm_treppe2_ausfahren)
+            geschwindigkeitSetzen(speed_treppe2_ausfahren, runtime.rpm_treppe2_ausfahren)
+            speichereRuntime()
+        elseif auswahl == "3" then
+            runtime.rpm_treppe2_einfahren = rpmEingabe("Treppe2 einfahren", runtime.rpm_treppe2_einfahren)
+            geschwindigkeitSetzen(speed_treppe2_einfahren, runtime.rpm_treppe2_einfahren)
+            speichereRuntime()
+        elseif auswahl == "4" then
+            runtime.rpm_boden_ausfahren = rpmEingabe("Boden ausfahren", runtime.rpm_boden_ausfahren)
+            geschwindigkeitSetzen(speed_boden_ausfahren, runtime.rpm_boden_ausfahren)
+            speichereRuntime()
+        elseif auswahl == "5" then
+            runtime.rpm_boden_einfahren = rpmEingabe("Boden einfahren", runtime.rpm_boden_einfahren)
+            geschwindigkeitSetzen(speed_boden_einfahren, runtime.rpm_boden_einfahren)
+            speichereRuntime()
+        elseif auswahl == "0" then
+            return
+        end
+    end
 end
 
 local function treppe1Manuell()
@@ -266,6 +376,9 @@ local function uiSchleife()
             runtime.boden = zahlEingabe("Neue Distanz Boden", runtime.boden)
             speichereRuntime()
 
+        elseif auswahl == "g" then
+            geschwindigkeitenMenu()
+
         elseif auswahl == "4" then treppe1Manuell()
         elseif auswahl == "5" then treppe2Manuell()
         elseif auswahl == "6" then bodenManuell()
@@ -286,4 +399,5 @@ end
 -- ============================================
 
 ladeRuntime()
+alleGeschwindigkeitenAnwenden()
 parallel.waitForAny(uiSchleife, triggerUeberwachung)
