@@ -9,7 +9,7 @@
 
 return {
 
-    config_version = 2,
+    config_version = 3,
 
     -- Peripheral-Namensfragmente (peripheral.find sucht Teilstring)
     peripherals = {
@@ -19,6 +19,14 @@ return {
         treppe2_einfahren = "treppe2_einfahren",
         boden_ausfahren   = "boden_ausfahren",
         boden_einfahren   = "boden_einfahren",
+    },
+
+    -- Redstone Relay (CC:Tweaked): einziger Redstone-Input am Computer
+    -- selbst ist der Trigger. Alle anderen Redstone-Ausgaenge (Treppe1-Z,
+    -- Boden-Z, Boden-X) laufen ueber diesen Relay-Peripheral, nicht ueber
+    -- physische Computer-Seiten.
+    redstone_relay = {
+        peripheral = "redstone_relay",
     },
 
     -- Bewegungsdistanzen in Bloecken
@@ -58,12 +66,14 @@ return {
         boden_x_ausgefahren   = "lime",       -- = Z unten + X ausgefahren + gedreht
     },
 
-    -- Redstone-Seiten am Computer, funktionsspezifisch
+    -- Redstone-Seiten: 'trigger' ist der einzige physisch am Computer
+    -- verkabelte Redstone-Input. treppe1_z/boden_z/boden_x sind Seiten
+    -- AM REDSTONE RELAY (siehe redstone_relay oben), nicht am Computer.
     redstone_seiten = {
-        treppe1_z = "back",    -- Treppe1: Z-Achse, beide Richtungen
-        boden_z   = "top",     -- Boden: Z-Achse
-        boden_x   = "bottom",  -- Boden: X-Achse (mit Z zusammen fuer Drehung)
-        trigger   = "left",    -- externer Redstone-Trigger fuer Gesamtablauf
+        treppe1_z = "back",    -- Treppe1: Z-Achse, beide Richtungen (am Relay)
+        boden_z   = "top",     -- Boden: Z-Achse (am Relay)
+        boden_x   = "bottom",  -- Boden: X-Achse (am Relay, mit Z zusammen fuer Drehung)
+        trigger   = "left",    -- physischer Redstone-Input direkt am Computer
     },
 
     -- Zugriffskontrolle Player Detector (Advanced Peripherals)
