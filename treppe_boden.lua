@@ -3,6 +3,9 @@
 -- CC:Tweaked + Create + Immersive Engineering (Redstone Wire Connector)
 -- Advanced Peripherals (Player Detector)
 --
+-- Alle Einstellungen kommen aus config.lua -- diese Datei nicht bearbeiten,
+-- stattdessen config.lua anpassen.
+--
 -- Achsen: Z = rauf/runter, X = vor/zurueck
 -- Grundposition (Treppe sichtbar):
 --   Treppenmodul1: oben (Z eingefahren), am Ende des Gantrys (X ausgefahren)
@@ -10,28 +13,33 @@
 --   Boden: um 90 Grad gedreht, alles eingefahren
 -- ============================================
 
-local CONFIG_FILE = "treppe_config.cfg"
+if not fs.exists("config.lua") then
+    error("config.lua nicht gefunden. Bitte zuerst den Installer ausfuehren.")
+end
+local cfg = dofile("config.lua")
 
-local config = {
-    treppe1 = 4,
-    treppe2 = 4,
-    boden   = 2,
+local RUNTIME_FILE = "treppe_runtime.cfg"
+
+local runtime = {
+    treppe1 = cfg.distanzen.treppe1,
+    treppe2 = cfg.distanzen.treppe2,
+    boden   = cfg.distanzen.boden,
 }
 
-local function ladeConfig()
-    if fs.exists(CONFIG_FILE) then
-        local f = fs.open(CONFIG_FILE, "r")
+local function ladeRuntime()
+    if fs.exists(RUNTIME_FILE) then
+        local f = fs.open(RUNTIME_FILE, "r")
         local data = textutils.unserialize(f.readAll())
         f.close()
         if data then
-            for k, v in pairs(data) do config[k] = v end
+            for k, v in pairs(data) do runtime[k] = v end
         end
     end
 end
 
-local function speichereConfig()
-    local f = fs.open(CONFIG_FILE, "w")
-    f.write(textutils.serialize(config))
+local function speichereRuntime()
+    local f = fs.open(RUNTIME_FILE, "w")
+    f.write(textutils.serialize(runtime))
     f.close()
 end
 
@@ -49,39 +57,33 @@ local function findGearshift(fragment)
     return p
 end
 
-local treppe1_aus = findGearshift("treppe1_ausfahren")
-local treppe1_ein = findGearshift("treppe1_einfahren")
-local treppe2_aus = findGearshift("treppe2_ausfahren")
-local treppe2_ein = findGearshift("treppe2_einfahren")
-local boden_aus   = findGearshift("boden_ausfahren")
-local boden_ein   = findGearshift("boden_einfahren")
+local treppe1_aus = findGearshift(cfg.peripherals.treppe1_ausfahren)
+local treppe1_ein = findGearshift(cfg.peripherals.treppe1_einfahren)
+local treppe2_aus = findGearshift(cfg.peripherals.treppe2_ausfahren)
+local treppe2_ein = findGearshift(cfg.peripherals.treppe2_einfahren)
+local boden_aus   = findGearshift(cfg.peripherals.boden_ausfahren)
+local boden_ein   = findGearshift(cfg.peripherals.boden_einfahren)
 
 local connector = peripheral.find("redstoneWireConnector")
 local playerDetector = peripheral.find("playerDetector")
 
--- Farbkanaele je Kontaktpunkt (nicht jede Position hat einen Kontakt)
-local CH_T1_X_EIN  = "white"
-local CH_T1_X_AUS  = "orange"      -- = Z eingefahren
-local CH_T2_X_EIN  = "light_blue"
-local CH_T2_X_AUS  = "magenta"
-local CH_B_X_EIN   = "yellow"
-local CH_B_X_AUS   = "lime"        -- = Z unten + X ausgefahren + gedreht
+local CH_T1_X_EIN = cfg.farbkanaele.treppe1_x_eingefahren
+local CH_T1_X_AUS = cfg.farbkanaele.treppe1_x_ausgefahren
+local CH_T2_X_EIN = cfg.farbkanaele.treppe2_x_eingefahren
+local CH_T2_X_AUS = cfg.farbkanaele.treppe2_x_ausgefahren
+local CH_B_X_EIN  = cfg.farbkanaele.boden_x_eingefahren
+local CH_B_X_AUS  = cfg.farbkanaele.boden_x_ausgefahren
 
--- Redstone-Seiten, funktionsspezifisch
-local RS_TREPPE1_Z_SIDE = "back"   -- Treppe1: Z-Achse, beide Richtungen
-local RS_BODEN_Z_SIDE   = "top"    -- Boden: Z-Achse
-local RS_BODEN_X_SIDE   = "bottom" -- Boden: X-Achse (zusammen mit Z fuer Drehung noetig)
-local RS_TRIGGER_SIDE   = "left"   -- externer Redstone-Trigger fuer Gesamtablauf
+local RS_TREPPE1_Z_SIDE = cfg.redstone_seiten.treppe1_z
+local RS_BODEN_Z_SIDE   = cfg.redstone_seiten.boden_z
+local RS_BODEN_X_SIDE   = cfg.redstone_seiten.boden_x
+local RS_TRIGGER_SIDE   = cfg.redstone_seiten.trigger
 
--- Zugriffskontrolle Player Detector
-local PLAYER_RANGE = 5
-local ERLAUBTE_SPIELER = {
-    -- "Spielername1",
-    -- "Spielername2",
-}
+local PLAYER_RANGE = cfg.spieler.reichweite
+local ERLAUBTE_SPIELER = cfg.spieler.erlaubte_spieler
 
-local TIMEOUT_S = 15
-local zustand = "treppe"  -- "treppe" = Grundposition, "boden" = Boden sichtbar
+local TIMEOUT_S = cfg.timeout_sekunden
+local zustand = "treppe"
 local ablaufLaeuft = false
 
 -- ============================================
@@ -113,29 +115,25 @@ end
 -- ============================================
 
 local function treppeVerschwinden()
-    -- Treppe1 + Treppe2 gleichzeitig einfahren
     redstone.setOutput(RS_TREPPE1_Z_SIDE, true)
-    treppe1_ein.move(config.treppe1, 1)
-    treppe2_ein.move(config.treppe2, 1)
+    treppe1_ein.move(runtime.treppe1, 1)
+    treppe2_ein.move(runtime.treppe2, 1)
 
     warteAufKanal(CH_T1_X_EIN, true)
     warteAufKanal(CH_T2_X_EIN, true)
     redstone.setOutput(RS_TREPPE1_Z_SIDE, false)
 
-    -- Erst danach: Boden ausfahren (inkl. Drehung in der Gearshift-Sequenz)
-    bodenBewegen(boden_aus, config.boden, CH_B_X_AUS)
+    bodenBewegen(boden_aus, runtime.boden, CH_B_X_AUS)
 
     zustand = "boden"
 end
 
 local function treppeHerstellen()
-    -- Boden einfahren (inkl. Ruecksdrehung in der Gearshift-Sequenz)
-    bodenBewegen(boden_ein, config.boden, CH_B_X_EIN)
+    bodenBewegen(boden_ein, runtime.boden, CH_B_X_EIN)
 
-    -- Treppe1 + Treppe2 gleichzeitig ausfahren
     redstone.setOutput(RS_TREPPE1_Z_SIDE, true)
-    treppe1_aus.move(config.treppe1, 1)
-    treppe2_aus.move(config.treppe2, 1)
+    treppe1_aus.move(runtime.treppe1, 1)
+    treppe2_aus.move(runtime.treppe2, 1)
 
     warteAufKanal(CH_T1_X_AUS, true)
     warteAufKanal(CH_T2_X_AUS, true)
@@ -170,7 +168,7 @@ local function erlaubterSpielerInReichweite()
 end
 
 -- ============================================
--- Trigger-Ueberwachung (Redstone + Player Detector parallel)
+-- Trigger-Ueberwachung
 -- ============================================
 
 local function triggerUeberwachung()
@@ -202,9 +200,9 @@ local function zeichneUI()
     print("Status: " .. zustand)
     print("")
     print("-- Distanzen (Blocke) --")
-    print("1) Treppe1: " .. config.treppe1)
-    print("2) Treppe2: " .. config.treppe2)
-    print("3) Boden:   " .. config.boden)
+    print("1) Treppe1: " .. runtime.treppe1)
+    print("2) Treppe2: " .. runtime.treppe2)
+    print("3) Boden:   " .. runtime.boden)
     print("")
     print("-- Manuelle Fahrt --")
     print("4) Treppe1 manuell")
@@ -230,8 +228,8 @@ local function treppe1Manuell()
     write("> ")
     local r = read()
     redstone.setOutput(RS_TREPPE1_Z_SIDE, true)
-    if r == "a" then treppe1_aus.move(config.treppe1, 1)
-    elseif r == "e" then treppe1_ein.move(config.treppe1, 1) end
+    if r == "a" then treppe1_aus.move(runtime.treppe1, 1)
+    elseif r == "e" then treppe1_ein.move(runtime.treppe1, 1) end
     redstone.setOutput(RS_TREPPE1_Z_SIDE, false)
 end
 
@@ -240,8 +238,8 @@ local function treppe2Manuell()
     print("Treppe2: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    if r == "a" then treppe2_aus.move(config.treppe2, 1)
-    elseif r == "e" then treppe2_ein.move(config.treppe2, 1) end
+    if r == "a" then treppe2_aus.move(runtime.treppe2, 1)
+    elseif r == "e" then treppe2_ein.move(runtime.treppe2, 1) end
 end
 
 local function bodenManuell()
@@ -249,8 +247,8 @@ local function bodenManuell()
     print("Boden: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    if r == "a" then bodenBewegen(boden_aus, config.boden, CH_B_X_AUS)
-    elseif r == "e" then bodenBewegen(boden_ein, config.boden, CH_B_X_EIN) end
+    if r == "a" then bodenBewegen(boden_aus, runtime.boden, CH_B_X_AUS)
+    elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, CH_B_X_EIN) end
 end
 
 local function uiSchleife()
@@ -259,14 +257,14 @@ local function uiSchleife()
         local auswahl = read()
 
         if auswahl == "1" then
-            config.treppe1 = zahlEingabe("Neue Distanz Treppe1", config.treppe1)
-            speichereConfig()
+            runtime.treppe1 = zahlEingabe("Neue Distanz Treppe1", runtime.treppe1)
+            speichereRuntime()
         elseif auswahl == "2" then
-            config.treppe2 = zahlEingabe("Neue Distanz Treppe2", config.treppe2)
-            speichereConfig()
+            runtime.treppe2 = zahlEingabe("Neue Distanz Treppe2", runtime.treppe2)
+            speichereRuntime()
         elseif auswahl == "3" then
-            config.boden = zahlEingabe("Neue Distanz Boden", config.boden)
-            speichereConfig()
+            runtime.boden = zahlEingabe("Neue Distanz Boden", runtime.boden)
+            speichereRuntime()
 
         elseif auswahl == "4" then treppe1Manuell()
         elseif auswahl == "5" then treppe2Manuell()
@@ -287,5 +285,5 @@ end
 -- Start
 -- ============================================
 
-ladeConfig()
+ladeRuntime()
 parallel.waitForAny(uiSchleife, triggerUeberwachung)
