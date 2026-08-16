@@ -99,6 +99,16 @@ if not connector then
     error("Bitte config.lua/Code mit dem richtigen Peripheral-Typnamen aktualisieren.")
 end
 
+local relay = peripheral.find(cfg.redstone_relay.peripheral)
+if not relay then
+    print("FEHLER: Redstone Relay ('" .. cfg.redstone_relay.peripheral .. "') nicht gefunden.")
+    print("Vorhandene Peripherals:")
+    for _, name in ipairs(peripheral.getNames()) do
+        print("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
+    end
+    error("Bitte config.lua/Code mit dem richtigen Peripheral-Typnamen aktualisieren.")
+end
+
 local playerDetector = peripheral.find("playerDetector")
 
 local CH_T1_X_EIN = cfg.farbkanaele.treppe1_x_eingefahren
@@ -187,12 +197,12 @@ local function warteAufKanal(kanal, zielZustand)
 end
 
 local function bodenBewegen(gearshift, distanz, zielKanal)
-    redstone.setOutput(RS_BODEN_Z_SIDE, true)
-    redstone.setOutput(RS_BODEN_X_SIDE, true)
+    relay.setOutput(RS_BODEN_Z_SIDE, true)
+    relay.setOutput(RS_BODEN_X_SIDE, true)
     gearshift.move(distanz, 1)
     warteAufKanal(zielKanal, true)
-    redstone.setOutput(RS_BODEN_Z_SIDE, false)
-    redstone.setOutput(RS_BODEN_X_SIDE, false)
+    relay.setOutput(RS_BODEN_Z_SIDE, false)
+    relay.setOutput(RS_BODEN_X_SIDE, false)
 end
 
 -- ============================================
@@ -200,13 +210,13 @@ end
 -- ============================================
 
 local function treppeVerschwinden()
-    redstone.setOutput(RS_TREPPE1_Z_SIDE, true)
+    relay.setOutput(RS_TREPPE1_Z_SIDE, true)
     treppe1_ein.move(runtime.treppe1, 1)
     treppe2_ein.move(runtime.treppe2, 1)
 
     warteAufKanal(CH_T1_X_EIN, true)
     warteAufKanal(CH_T2_X_EIN, true)
-    redstone.setOutput(RS_TREPPE1_Z_SIDE, false)
+    relay.setOutput(RS_TREPPE1_Z_SIDE, false)
 
     bodenBewegen(boden_aus, runtime.boden, CH_B_X_AUS)
 
@@ -216,13 +226,13 @@ end
 local function treppeHerstellen()
     bodenBewegen(boden_ein, runtime.boden, CH_B_X_EIN)
 
-    redstone.setOutput(RS_TREPPE1_Z_SIDE, true)
+    relay.setOutput(RS_TREPPE1_Z_SIDE, true)
     treppe1_aus.move(runtime.treppe1, 1)
     treppe2_aus.move(runtime.treppe2, 1)
 
     warteAufKanal(CH_T1_X_AUS, true)
     warteAufKanal(CH_T2_X_AUS, true)
-    redstone.setOutput(RS_TREPPE1_Z_SIDE, false)
+    relay.setOutput(RS_TREPPE1_Z_SIDE, false)
 
     zustand = "treppe"
 end
@@ -269,9 +279,9 @@ local function zustandInitialisieren()
     else
         print("Zustand nicht eindeutig -- fahre einmalig in Grundstellung (Treppe)")
         zustand = "boden"  -- erzwingt treppeHerstellen() unten
-        redstone.setOutput(RS_TREPPE1_Z_SIDE, false)
-        redstone.setOutput(RS_BODEN_Z_SIDE, false)
-        redstone.setOutput(RS_BODEN_X_SIDE, false)
+        relay.setOutput(RS_TREPPE1_Z_SIDE, false)
+        relay.setOutput(RS_BODEN_Z_SIDE, false)
+        relay.setOutput(RS_BODEN_X_SIDE, false)
         treppeHerstellen()
     end
 end
@@ -425,10 +435,10 @@ local function treppe1Manuell()
     print("Treppe1: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    redstone.setOutput(RS_TREPPE1_Z_SIDE, true)
+    relay.setOutput(RS_TREPPE1_Z_SIDE, true)
     if r == "a" then treppe1_aus.move(runtime.treppe1, 1)
     elseif r == "e" then treppe1_ein.move(runtime.treppe1, 1) end
-    redstone.setOutput(RS_TREPPE1_Z_SIDE, false)
+    relay.setOutput(RS_TREPPE1_Z_SIDE, false)
     verriegelungFreigeben()
 end
 
