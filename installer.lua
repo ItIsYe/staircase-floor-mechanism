@@ -176,7 +176,34 @@ end
 
 configMigrieren()
 
+-- startup.lua: startet treppe_boden.lua automatisch bei jedem PC-Boot.
+-- Wird bei jedem Installer-Lauf neu geschrieben (enthaelt keine eigenen
+-- Einstellungen, daher unproblematisch zu ueberschreiben).
+write("Schreibe startup.lua ... ")
+local startupInhalt = [[
+-- Automatisch vom Installer erzeugt. Startet den Treppen-/Boden-Mechanismus
+-- bei jedem Boot des Computers. Nicht manuell bearbeiten -- Aenderungen
+-- gehoeren in treppe_boden.lua bzw. config.lua.
+
+while true do
+    local ok, fehler = pcall(function()
+        shell.run("treppe_boden.lua")
+    end)
+    if not ok then
+        print("Fehler in treppe_boden.lua: " .. tostring(fehler))
+        print("Neustart in 5 Sekunden ...")
+        sleep(5)
+    else
+        -- Normales Beenden ueber Menuepunkt 0 -- Startup-Schleife verlassen
+        break
+    end
+end
+]]
+dateiSchreiben("startup.lua", startupInhalt)
+print("OK")
+
 print("")
-print("Fertig. Start mit: treppe_boden")
-print("Erneutes Ausfuehren dieses Installers aktualisiert treppe_boden.lua")
-print("und migriert config.lua automatisch (eigene Werte bleiben erhalten).")
+print("Fertig. Der Mechanismus startet ab jetzt automatisch bei jedem PC-Neustart.")
+print("Manueller Start jederzeit moeglich mit: treppe_boden")
+print("Erneutes Ausfuehren dieses Installers aktualisiert treppe_boden.lua und")
+print("startup.lua und migriert config.lua automatisch (eigene Werte bleiben erhalten).")
