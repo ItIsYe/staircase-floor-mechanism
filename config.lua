@@ -1,9 +1,15 @@
 -- ============================================
 -- Konfigurationsdatei Treppen-/Boden-Mechanismus
 -- Alle Werte hier anpassen, treppe_boden.lua nicht veraendern
+--
+-- config_version wird vom Installer genutzt, um bei Updates neue
+-- Einstellungsfelder automatisch zu ergaenzen, ohne bestehende
+-- Werte zu ueberschreiben. Nicht manuell aendern.
 -- ============================================
 
 return {
+
+    config_version = 1,
 
     -- Peripheral-Namensfragmente (peripheral.find sucht Teilstring)
     peripherals = {
