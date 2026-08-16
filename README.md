@@ -63,7 +63,10 @@ Der umgekehrte Ablauf (`Boden -> Treppe`) laeuft spiegelverkehrt.
 
 Nicht jede Position hat einen eigenen Kontakt — z.B. bestaetigt das X-ausgefahren-Relay bei Treppenmodul1 gleichzeitig auch Z-eingefahren, weil beide Zustaende an der gleichen physischen Position zusammenfallen.
 
-Beim Boden wird "ausgefahren" ueber **zwei** Relais gemeinsam bestaetigt: `boden_x_ausgefahren` (Position) UND `boden_x_ausgefahren_drehkontrolle` (Drehung korrekt erfolgt). Erst wenn beide Relais gleichzeitig ein Signal geben, gilt der Boden als sicher in Endlage.
+Beim Boden wird jeder der beiden Zustaende ueber **drei** Relais gemeinsam bestaetigt:
+
+- **Grundstellung** (Treppe sichtbar): X ausgefahren (`boden_x_ausgefahren_grund`) UND Z eingefahren (`boden_z_kontakt` aktiv) UND nicht gedreht (`boden_nicht_gedreht`)
+- **Boden sichtbar** (Treppe weg): X eingefahren (`boden_x_eingefahren`) UND Z ausgefahren (`boden_z_kontakt` **inaktiv**, derselbe Kontakt wie oben, nur umgekehrt gelesen) UND gedreht (`boden_gedreht`)
 
 Bei Treppenmodul1 wird "eingefahren" (verschwunden) ebenfalls ueber **zwei** Relais gemeinsam bestaetigt: `treppe1_x_eingefahren` (X-Position) UND `treppe1_x_eingefahren_z_kontrolle` (Z-Achse Endpunkt "unten"). Treppenmodul2 hat weiterhin nur einen einzelnen Kontakt pro Endposition.
 
