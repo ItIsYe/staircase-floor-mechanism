@@ -57,37 +57,36 @@ end
 -- Peripherals
 -- ============================================
 
-local function findGearshift(fragment)
-    local p = peripheral.find("Create_SequencedGearshift", function(name)
-        return string.find(name, fragment) ~= nil
-    end)
+local function findGearshift(exakterName)
+    local p = peripheral.wrap(exakterName)
     if not p then
-        error("Gearshift '" .. fragment .. "' nicht gefunden")
-    end
-    return p
-end
-
-local function findSpeedController(fragment)
-    local p = peripheral.find("Create_RotationSpeedController", function(name)
-        return string.find(name, fragment) ~= nil
-    end)
-    if not p then
-        print("WARNUNG: Rotation Speed Controller '" .. fragment .. "' nicht gefunden")
-    end
-    return p
-end
-
-local function findRelay(fragment)
-    local p = peripheral.find("redstone_relay", function(name)
-        return string.find(name, fragment) ~= nil
-    end)
-    if not p then
-        print("FEHLER: Redstone Relay '" .. fragment .. "' nicht gefunden.")
+        print("FEHLER: Gearshift '" .. exakterName .. "' nicht gefunden.")
         print("Vorhandene Peripherals:")
         for _, name in ipairs(peripheral.getNames()) do
             print("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
         end
-        error("Bitte config.lua mit den richtigen Relay-Namen aktualisieren.")
+        error("Bitte config.lua mit dem richtigen Peripheral-Namen aktualisieren.")
+    end
+    return p
+end
+
+local function findSpeedController(exakterName)
+    local p = peripheral.wrap(exakterName)
+    if not p then
+        print("WARNUNG: Rotation Speed Controller '" .. exakterName .. "' nicht gefunden")
+    end
+    return p
+end
+
+local function findRelay(exakterName)
+    local p = peripheral.wrap(exakterName)
+    if not p then
+        print("FEHLER: Redstone Relay '" .. exakterName .. "' nicht gefunden.")
+        print("Vorhandene Peripherals:")
+        for _, name in ipairs(peripheral.getNames()) do
+            print("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
+        end
+        error("Bitte config.lua mit dem richtigen Relay-Namen aktualisieren.")
     end
     return p
 end
