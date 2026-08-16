@@ -12,7 +12,7 @@
 
 return {
 
-    config_version = 6,
+    config_version = 7,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -49,9 +49,7 @@ return {
             treppe2_x_ausgefahren = "redstone_relay_2",
             boden_x_eingefahren   = "redstone_relay_10",
             boden_x_ausgefahren   = "redstone_relay_9",   -- = Z unten + X ausgefahren + gedreht
-            -- redstone_relay_8: zusaetzliche Kontrolle ob Drehung korrekt
-            -- erfolgt ist und Boden auf Position ist -- aktuell nicht in
-            -- der Ablauflogik verdrahtet, als Reserve/manuelle Pruefung verfuegbar
+            boden_x_ausgefahren_drehkontrolle = "redstone_relay_8",  -- zusaetzliche Bestaetigung: Drehung korrekt + Position stimmt
         },
     },
 
