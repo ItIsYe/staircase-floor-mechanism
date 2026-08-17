@@ -116,44 +116,45 @@ local relay_treppe1_z = findRelay(cfg.redstone_relais.ausgaenge.treppe1_z)
 local relay_boden_z   = findRelay(cfg.redstone_relais.ausgaenge.boden_z)
 local relay_boden_x   = findRelay(cfg.redstone_relais.ausgaenge.boden_x)
 
--- Eingangs-Relais (Positionskontakte)
-local relay_t1_x_ein = findRelay(cfg.redstone_relais.eingaenge.treppe1_x_eingefahren)
-local relay_t1_z_unten = findRelay(cfg.redstone_relais.eingaenge.treppe1_x_eingefahren_z_kontrolle)
+-- Eingangs-Relais (Positionskontakte) -- NEU DEFINIERT
 
--- Treppe1 gilt nur dann als wirklich "eingefahren" (verschwunden), wenn
--- BEIDE Relais bestaetigen: X-Position (relay_t1_x_ein) UND Z-Achse unten
--- (relay_t1_z_unten).
-local relay_t1_x_ein_bestaetigt = {
+-- Treppenmodul1: Y-Achse (beide Endpunkte) + Z-Achse (nur unten)
+local relay_t1_y_ausgefahren = findRelay(cfg.redstone_relais.eingaenge.treppe1_y_ausgefahren)
+local relay_t1_y_eingefahren = findRelay(cfg.redstone_relais.eingaenge.treppe1_y_eingefahren)
+local relay_t1_z_unten       = findRelay(cfg.redstone_relais.eingaenge.treppe1_z_unten)
+
+-- Treppe1 "Treppe"-Zustand: Y ausgefahren allein (kein Z-oben-Kontakt vorhanden)
+-- Treppe1 "Grundstellung"-Zustand (verschwunden): Y eingefahren UND Z unten zusammen
+local relay_t1_treppe_bestaetigt = relay_t1_y_ausgefahren
+local relay_t1_grund_bestaetigt = {
     getInput = function(side)
-        return relay_t1_x_ein.getInput(side) and relay_t1_z_unten.getInput(side)
+        return relay_t1_y_eingefahren.getInput(side) and relay_t1_z_unten.getInput(side)
     end
 }
-local relay_t1_x_aus = findRelay(cfg.redstone_relais.eingaenge.treppe1_x_ausgefahren)
-local relay_t2_x_ein = findRelay(cfg.redstone_relais.eingaenge.treppe2_x_eingefahren)
-local relay_t2_x_aus = findRelay(cfg.redstone_relais.eingaenge.treppe2_x_ausgefahren)
--- Boden Grundstellung (Treppe sichtbar): X eingefahren + Z eingefahren.
--- HINWEIS: laut Vorgabe existiert kein Relay fuer die Drehungsbestaetigung
--- der Grundstellung -- wird NICHT geprueft.
--- HINWEIS: relay_b_x_grund nutzt DENSELBEN Relay-Namen wie relay_b_x_ein
--- unten (redstone_relay_10) -- so vom Nutzer explizit bestaetigt/vorgegeben.
-local relay_b_x_grund = findRelay(cfg.redstone_relais.eingaenge.boden_x_grund_kontakt)
-local relay_b_z_eingefahren = findRelay(cfg.redstone_relais.eingaenge.boden_z_eingefahren)
 
--- Boden sichtbar (Treppe weg): X eingefahren (2-fach bestaetigt) + gedreht.
--- HINWEIS: laut Vorgabe existiert kein Relay fuer Z ausgefahren -- entfaellt.
-local relay_b_x_ein = findRelay(cfg.redstone_relais.eingaenge.boden_x_eingefahren)
-local relay_b_x_ein_zusatz = findRelay(cfg.redstone_relais.eingaenge.boden_x_eingefahren_zusatz)
-local relay_b_gedreht = findRelay(cfg.redstone_relais.eingaenge.boden_gedreht)
+-- Treppenmodul2: nur Y-Achse (beide Endpunkte, je ein eigener Kontakt)
+local relay_t2_y_ausgefahren = findRelay(cfg.redstone_relais.eingaenge.treppe2_y_ausgefahren)
+local relay_t2_y_eingefahren = findRelay(cfg.redstone_relais.eingaenge.treppe2_y_eingefahren)
 
+-- Boden: X-Achse (beide Endpunkte) + kombinierte Z/A-Kontakte
+local relay_b_x_links  = findRelay(cfg.redstone_relais.eingaenge.boden_x_links)
+local relay_b_x_rechts = findRelay(cfg.redstone_relais.eingaenge.boden_x_rechts)
+local relay_b_z_unten_a90 = findRelay(cfg.redstone_relais.eingaenge.boden_z_unten_a90)
+local relay_b_z_oben_a0   = findRelay(cfg.redstone_relais.eingaenge.boden_z_oben_a0)
+
+-- Boden "Grundstellung" (Treppe sichtbar): X rechts UND Z-oben+A0-Kontakt
+-- zusammen -- beide zusammen bestaetigen alle 3 Achsen (X, Z, A).
 local relay_boden_grundstellung_bestaetigt = {
     getInput = function(side)
-        return relay_b_x_grund.getInput(side) and relay_b_z_eingefahren.getInput(side)
+        return relay_b_x_rechts.getInput(side) and relay_b_z_oben_a0.getInput(side)
     end
 }
 
+-- Boden "sichtbar" (Treppe weg): X links UND Z-unten+A90-Kontakt zusammen --
+-- beide zusammen bestaetigen ebenfalls alle 3 Achsen (X, Z, A).
 local relay_boden_sichtbar_bestaetigt = {
     getInput = function(side)
-        return relay_b_x_ein.getInput(side) and relay_b_x_ein_zusatz.getInput(side) and relay_b_gedreht.getInput(side)
+        return relay_b_x_links.getInput(side) and relay_b_z_unten_a90.getInput(side)
     end
 }
 
@@ -184,9 +185,9 @@ end
 
 local function inEndlage()
     if zustand == "treppe" then
-        return relaisAn(relay_t1_x_aus) and relaisAn(relay_t2_x_aus) and relaisAn(relay_boden_grundstellung_bestaetigt)
+        return relaisAn(relay_t1_treppe_bestaetigt) and relaisAn(relay_t2_y_ausgefahren) and relaisAn(relay_boden_grundstellung_bestaetigt)
     elseif zustand == "boden" then
-        return relaisAn(relay_t1_x_ein_bestaetigt) and relaisAn(relay_t2_x_ein) and relaisAn(relay_boden_sichtbar_bestaetigt)
+        return relaisAn(relay_t1_grund_bestaetigt) and relaisAn(relay_t2_y_eingefahren) and relaisAn(relay_boden_sichtbar_bestaetigt)
     end
     return false
 end
@@ -258,8 +259,8 @@ local function treppeVerschwinden()
     treppe1_ein.move(runtime.treppe1, RICHTUNG_T1_EIN)
     treppe2_ein.move(runtime.treppe2, RICHTUNG_T2_EIN)
 
-    warteAufRelay(relay_t1_x_ein_bestaetigt, true)
-    warteAufRelay(relay_t2_x_ein, true)
+    warteAufRelay(relay_t1_grund_bestaetigt, true)
+    warteAufRelay(relay_t2_y_eingefahren, true)
     relaisSetzen(relay_treppe1_z, false)
 
     bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_sichtbar_bestaetigt)
@@ -274,8 +275,8 @@ local function treppeHerstellen()
     treppe1_aus.move(runtime.treppe1, RICHTUNG_T1_AUS)
     treppe2_aus.move(runtime.treppe2, RICHTUNG_T2_AUS)
 
-    warteAufRelay(relay_t1_x_aus, true)
-    warteAufRelay(relay_t2_x_aus, true)
+    warteAufRelay(relay_t1_treppe_bestaetigt, true)
+    warteAufRelay(relay_t2_y_ausgefahren, true)
     relaisSetzen(relay_treppe1_z, false)
 
     zustand = "treppe"
@@ -310,8 +311,8 @@ end
 local function zustandInitialisieren()
     print("Initialisiere Zustand ueber Relais-Kontakte ...")
 
-    local treppeErkannt = relaisAn(relay_t1_x_aus) and relaisAn(relay_t2_x_aus) and relaisAn(relay_boden_grundstellung_bestaetigt)
-    local bodenErkannt  = relaisAn(relay_t1_x_ein_bestaetigt) and relaisAn(relay_t2_x_ein) and relaisAn(relay_boden_sichtbar_bestaetigt)
+    local treppeErkannt = relaisAn(relay_t1_treppe_bestaetigt) and relaisAn(relay_t2_y_ausgefahren) and relaisAn(relay_boden_grundstellung_bestaetigt)
+    local bodenErkannt  = relaisAn(relay_t1_grund_bestaetigt) and relaisAn(relay_t2_y_eingefahren) and relaisAn(relay_boden_sichtbar_bestaetigt)
 
     if treppeErkannt and not bodenErkannt then
         zustand = "treppe"
