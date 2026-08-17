@@ -46,7 +46,7 @@ return {
     -- ist (siehe redstone_trigger unten), alles andere laeuft ueber
     -- diese Relais-Peripherals (exakte Namen).
     redstone_relais = {
-        seite = "left",  -- gilt fuer ALLE Relais unten, Seite ist egal
+        seite = "left",  -- NICHT MEHR GENUTZT: Code prueft/setzt jetzt automatisch alle 6 Seiten
 
         -- Ausgaenge (Ansteuerung der Bewegung) -- UNVERAENDERT
         ausgaenge = {
@@ -120,3 +120,4 @@ return {
     timeout_sekunden = 15,
 
 }
+
