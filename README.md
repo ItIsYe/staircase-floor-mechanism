@@ -77,6 +77,10 @@ Nicht jede Achsen-Position hat einen eigenen Kontakt -- manche Kontakte bestaeti
 
 "Grundstellung": X-rechts UND Z-oben+A0-Kontakt zusammen -- bestaetigt alle 3 Achsen. "Boden sichtbar": X-links UND Z-unten+A90-Kontakt zusammen -- bestaetigt ebenfalls alle 3 Achsen.
 
+## Seiten-Unabhaengigkeit bei Relais
+
+Die konkrete Blockseite ist an jedem Relay physisch egal, weil jedes Relay nur ein einziges Signal traegt -- die Peripheral-API verlangt aber trotzdem immer eine Seite als Parameter. Deshalb prueft der Code bei jedem Eingangs-Relay automatisch **alle 6 Seiten** (ODER-Verknuepfung: irgendeine Seite aktiv reicht) und setzt bei jedem Ausgangs-Relay **alle 6 Seiten gleichzeitig**. Das `seite`-Feld in `config.lua` wird dadurch nicht mehr verwendet -- egal wie die Relais im Spiel ausgerichtet sind, es wird trotzdem erkannt.
+
 ## Redstone-Ausgaenge (Ansteuerung, unveraendert)
 
 | Signal | Relay |
