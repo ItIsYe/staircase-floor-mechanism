@@ -16,7 +16,7 @@ Laedt `treppe_boden.lua`, `config.lua` (nur beim ersten Mal / bei fehlenden Feld
 
 ## Peripheral-Namen
 
-Alle Peripheral-Namen in `config.lua` sind **exakte Namen**, keine Textfragmente. Die Blocke/Modems werden NICHT umbenannt -- stattdessen werden die automatisch von CC:Tweaked vergebenen Standardnamen (z.B. `Create_SequencedGearshift_2`, `redstone_relay_9`) direkt eingetragen.
+Alle Peripheral-Namen in `config.lua` sind **exakte Namen**, keine Textfragmente. Die Blocke/Modems werden NICHT umbenannt -- stattdessen werden die automatisch von CC:Tweaked vergebenen Standardnamen (z.B. `Create_SequencedGearshift_2`, `redstone_relay_20`) direkt eingetragen.
 
 So findet ihr heraus, welcher Standardname zu welcher Funktion gehoert:
 
@@ -24,88 +24,95 @@ So findet ihr heraus, welcher Standardname zu welcher Funktion gehoert:
 2. Jedes einzeln testen, z.B. `peripheral.wrap("Create_SequencedGearshift_2").move(1,1)` und beobachten, welcher Block sich bewegt
 3. Zugeordnete Namen in `config.lua` eintragen
 
-## Aufbau
+## Achsen
 
-**Achsen:** Z = rauf/runter, X = vor/zurueck
+**Z** = hoch/runter, **X** = links/rechts, **Y** = vor/zurueck, **A** = Drehachse
 
-**Grundposition (Treppe sichtbar):**
-- Treppenmodul1: oben (Z eingefahren), am Ende des Gantrys (X ausgefahren)
-- Treppenmodul2: X komplett ausgefahren, am Ende des Gantrys
-- Boden: um 90 Grad gedreht, alles eingefahren
+## Module und Bewegungslogik
 
-**Module:** Treppenmodul1, Treppenmodul2, Boden — je zwei Sequenced Gearshifts (Ausfahren + Einfahren).
+**Treppenmodul1** -- Y-Achse und Z-Achse:
+- Z darf nur ausfahren, wenn Y am Endpunkt "ausgefahren" ist
+- Y darf nur fahren, wenn Z am Endpunkt "unten" ist
+- Z-Achse fährt nur, wenn die Y-Achse (bzw. das zugehoerige Ausgangs-Relay) ein Redstone-Signal bekommt
+- Endpunkte: Y ausgefahren (Treppe) / Y eingefahren (Grundstellung), Z unten (Grundstellung) / Z oben (Treppe, kein Kontakt vorhanden)
 
-## Redstone-Verkabelung
+**Treppenmodul2** -- nur Y-Achse:
+- Kein Redstone-Signal noetig
+- Endpunkte: Y ausgefahren (Treppe) / Y eingefahren (Grundstellung)
 
-Am Computer selbst ist nur **ein** Redstone-Input physisch verkabelt: der Trigger (`redstone_trigger.seite` in `config.lua`).
+**Boden** -- X-Achse, Z-Achse, A-Achse (Drehung):
+- Um Z zu fahren, braucht die X-Achse ein Redstone-Signal
+- Um A zu fahren, brauchen X und Z beide ein Redstone-Signal
+- Z darf nur fahren, wenn X am Endpunkt "rechts" ist und A in Position ist
+- A darf nur fahren, wenn Z "unten" ist und X am linken Endpunkt ist
+- A wird nur zwischen 0 Grad und 90 Grad verfahren
+- Endpunkte: X links = eingefahren (Treppe) / X rechts = ausgefahren (Grundstellung), Z unten (Boden sichtbar) / Z oben (Grundstellung), A 0 Grad (Grundstellung) / A 90 Grad (Boden sichtbar)
 
-Alles andere laeuft ueber **dedizierte Redstone-Relais** (`redstone_relais` in `config.lua`) — pro Signal ein eigenes Relay-Peripheral:
+## Positionskontakte (Relais-Eingaenge)
 
-- **Ausgaenge** (Ansteuerung der Bewegung): Treppe1-Z, Boden-Z, Boden-X
-- **Eingaenge** (Positionskontakte): je ein Relay fuer "eingefahren" und "ausgefahren" bei Treppe1, Treppe2 und Boden (6 Relais gesamt)
+Nicht jede Achsen-Position hat einen eigenen Kontakt -- manche Kontakte bestaetigen bewusst mehrere Achsen gleichzeitig, weil sie physisch nur in genau dieser Kombination schalten koennen.
 
-Da jedes Relay nur ein einziges Signal traegt, ist die genutzte Seite am jeweiligen Relay beliebig — `redstone_relais.seite` gilt einheitlich fuer alle. Es gibt keinen Redstone Wire Connector und keine Farbkanaele mehr.
+**Treppenmodul1** (3 Kontakte):
+| Kontakt | Bestaetigt | Relay |
+|---|---|---|
+| Y ausgefahren | Y-Achse ausgefahren (Treppe) | `redstone_relay_20` |
+| Y eingefahren | Y-Achse eingefahren (Grundstellung) | `redstone_relay_21` |
+| Z unten | Z-Achse unten (Grundstellung) | `redstone_relay_24` |
+
+"Treppe"-Zustand: Y-ausgefahren-Kontakt allein (kein Z-oben-Kontakt vorhanden). "Grundstellung"-Zustand (verschwunden): Y-eingefahren UND Z-unten zusammen.
+
+**Treppenmodul2** (2 Kontakte):
+| Kontakt | Bestaetigt | Relay |
+|---|---|---|
+| Y ausgefahren | Y-Achse ausgefahren (Treppe) | `redstone_relay_17` |
+| Y eingefahren | Y-Achse eingefahren (Grundstellung) | `redstone_relay_18` |
+
+**Boden** (4 Kontakte):
+| Kontakt | Bestaetigt | Relay |
+|---|---|---|
+| X links | X eingefahren (Treppe) | `redstone_relay_25` |
+| X rechts | X ausgefahren (Grundstellung) | `redstone_relay_26` |
+| Z unten + A 90 Grad | Z unten UND A 90 Grad zusammen (Boden sichtbar) -- schaltet nur bei X links | `redstone_relay_28` |
+| Z oben + A 0 Grad | Z oben UND A 0 Grad zusammen (Grundstellung) -- schaltet nur wenn A nicht gedreht | `redstone_relay_29` |
+
+"Grundstellung": X-rechts UND Z-oben+A0-Kontakt zusammen -- bestaetigt alle 3 Achsen. "Boden sichtbar": X-links UND Z-unten+A90-Kontakt zusammen -- bestaetigt ebenfalls alle 3 Achsen.
+
+## Redstone-Ausgaenge (Ansteuerung, unveraendert)
+
+| Signal | Relay |
+|---|---|
+| Treppe1 Z-Achse | `redstone_relay_3` |
+| Boden Z-Achse | `redstone_relay_4` |
+| Boden X-Achse (mit Z zusammen fuer A-Drehung) | `redstone_relay_5` |
+
+Physischer Redstone-Input direkt am Computer (kein Relay): Trigger, Seite `right`.
 
 ## Richtungskalibrierung
 
-`move()` bewegt einen Gearshift in eine Richtung, die vom Vorzeichen des zweiten Parameters abhaengt (1 oder -1) -- welches Vorzeichen tatsaechlich "ausfahren" bzw. "einfahren" bedeutet, haengt von der physischen Verbauung ab und ist nicht vorhersehbar. Deshalb hat jeder der 6 Gearshifts einen eigenen Richtungsmodifier unter `richtung` in `config.lua` (Standard: `1`).
+`move()` bewegt einen Gearshift in eine Richtung, die vom Vorzeichen des zweiten Parameters abhaengt (1 oder -1). Jeder der 6 Gearshifts hat einen eigenen Richtungsmodifier unter `richtung` in `config.lua` (Standard: `1`). Ueber die manuelle Fahrt (Menuepunkte 4/5/6) testen und bei Bedarf auf `-1` umstellen -- kein Code-Aendern noetig.
 
-**Kalibrieren:** ueber die manuelle Fahrt (Menuepunkte 4/5/6) jeden Gearshift einzeln testen. Faehrt er in die falsche Richtung (z.B. "ausfahren" faehrt tatsaechlich ein), den zugehoerigen Wert in `richtung` von `1` auf `-1` aendern (oder umgekehrt) -- kein Code-Aendern noetig.
+## Geschwindigkeiten (Rotation Speed Controller, unveraendert)
 
-## Ablauf (Treppe -> Boden)
-
-1. Treppenmodul1 + Treppenmodul2 fahren gleichzeitig ein (Treppe1 braucht ein Signal am Treppe1-Z-Relay)
-2. Erst wenn beide Treppenmodule per Relay-Kontakt bestaetigt in Endlage sind: Boden faehrt aus (inkl. Drehung, gesteuert ueber Boden-Z- und Boden-X-Relay gemeinsam)
-
-Der umgekehrte Ablauf (`Boden -> Treppe`) laeuft spiegelverkehrt.
-
-## Positionserkennung
-
-Nicht jede Position hat einen eigenen Kontakt — z.B. bestaetigt das X-ausgefahren-Relay bei Treppenmodul1 gleichzeitig auch Z-eingefahren, weil beide Zustaende an der gleichen physischen Position zusammenfallen.
-
-Beim Boden wird jeder der beiden Zustaende ueber **zwei** Relais gemeinsam bestaetigt (Stand: Nutzer-Vorgabe per Tabelle):
-
-- **Grundstellung** (Treppe sichtbar): X eingefahren (`boden_x_grund_kontakt`, Relay `redstone_relay_10`) UND Z eingefahren (`boden_z_eingefahren`, Relay `redstone_relay_9`). Fuer die Drehung gibt es aktuell **kein** Relay -- wird nicht geprueft.
-- **Boden sichtbar** (Treppe weg): X eingefahren, zweifach bestaetigt (`boden_x_eingefahren` UND `boden_x_eingefahren_zusatz`, Relays `redstone_relay_10` und `redstone_relay_8`) UND gedreht (`boden_gedreht`, Relay `redstone_relay_14`). Fuer Z ausgefahren gibt es aktuell **kein** Relay -- wird nicht geprueft.
-
-**Achtung:** `boden_x_grund_kontakt` (Grundstellung) und `boden_x_eingefahren` (Boden sichtbar) zeigen beide auf denselben physischen Relay (`redstone_relay_10`) -- das ist so von Nutzerseite explizit vorgegeben, auch wenn dadurch der X-Anteil beider Zustandspruefungen vom exakt gleichen Signal abhaengt.
-
-Bei Treppenmodul1 wird "eingefahren" (verschwunden) ebenfalls ueber **zwei** Relais gemeinsam bestaetigt: `treppe1_x_eingefahren` (X-Position) UND `treppe1_x_eingefahren_z_kontrolle` (Z-Achse Endpunkt "unten"). Treppenmodul2 hat weiterhin nur einen einzelnen Kontakt pro Endposition.
-
-## Redstone-Signale (funktionsspezifisch)
-
-- Treppenmodul1: ein Signal fuer Z-Achsen-Bewegung (beide Richtungen)
-- Treppenmodul2: kein Redstone noetig
-- Boden: ein Signal fuer Z-Achse, ein Signal fuer X-Achse — Drehung braucht beide gleichzeitig, erfolgt aber erst wenn Z unten und X ausgefahren ist (intern im Gearshift-Sequenzeditor programmiert)
-
-## Geschwindigkeiten (Rotation Speed Controller)
-
-Fahrgeschwindigkeit ist per Create-`Rotation Speed Controller` steuerbar, RPM-Bereich -256 bis 256:
-
-- Treppenmodul1: ein gemeinsamer Controller fuer beide Richtungen
-- Treppenmodul2: getrennter Controller fuer Ausfahren und Einfahren
-- Boden: getrennter Controller fuer Ausfahren und Einfahren
-
-Ziel-RPM werden in `config.lua` unter `geschwindigkeiten.rpm` vorbelegt, sind aber auch live im Programm unter Menuepunkt `g` abfragbar und aenderbar. Aenderungen werden in `treppe_runtime.cfg` gespeichert und bleiben bei einem Update/Installer-Lauf erhalten.
+Fahrgeschwindigkeit ist per Create-`Rotation Speed Controller` steuerbar, RPM-Bereich -256 bis 256. Treppenmodul1: ein gemeinsamer Controller fuer beide Richtungen. Treppenmodul2/Boden: getrennter Controller fuer Ausfahren und Einfahren. Ziel-RPM in `config.lua` unter `geschwindigkeiten.rpm`, auch live im Programm unter Menuepunkt `g` aenderbar.
 
 ## Initialisierung
 
-Beim Programmstart wird der aktuelle Zustand ueber die Relay-Kontakte ermittelt (Treppe sichtbar vs. Boden sichtbar). Ist der Zustand nicht eindeutig bestimmbar, faehrt das Programm einmalig automatisch in die Grundstellung (Treppe sichtbar), um einen bekannten Ausgangszustand herzustellen.
+Beim Programmstart wird der aktuelle Zustand ueber die Relay-Kontakte ermittelt. Ist der Zustand nicht eindeutig bestimmbar, faehrt das Programm einmalig automatisch in die Grundstellung (Treppe sichtbar).
 
 ## Startup
 
 Der Installer schreibt zusaetzlich eine `startup.lua`, die `treppe_boden.lua` bei jedem Boot des Computers automatisch startet. Bei einem Fehler im Hauptskript wird nach 5 Sekunden automatisch neu gestartet.
 
-## Auslösung
+## Ausloesung (Geofence, unveraendert)
 
 - **Redstone-Trigger** (physischer Input am Computer): steigende Flanke togglet den Zustand, hat immer Vorrang vor der Geofence-Logik
-- **Geofence / Player Detector** (Advanced Peripherals): solange mindestens ein Whitelist-Spieler (`spieler.erlaubte_spieler` in `config.lua`) im konfigurierten Bereich (`spieler.reichweite`) ist, wird die Treppe erzwungen; verlassen alle Whitelist-Spieler den Bereich, wird der Boden erzwungen (Treppe verschwindet)
+- **Geofence / Player Detector**: solange mindestens ein Whitelist-Spieler (`spieler.erlaubte_spieler` in `config.lua`) im konfigurierten Bereich ist, wird die Treppe erzwungen; verlassen alle Whitelist-Spieler den Bereich, wird der Boden erzwungen
 - **Manuell** ueber die UI (Menuepunkte 4/5/6 fuer einzelne Module, 9 fuer den kompletten Toggle-Ablauf)
 
 ## Verriegelung
 
-Bevor eine neue Bewegung startet — automatisch (Redstone/Geofence) oder manuell — prueft das Programm per Relay-Kontakt, ob das System vollstaendig in einer bekannten Endlage steht (alle Module bestaetigt aus- oder eingefahren, passend zum aktuell gespeicherten Zustand). Laeuft bereits eine Bewegung oder ist der Zustand nicht eindeutig, wird die neue Aktion verweigert, statt Bewegungen zu ueberlappen.
+Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das System vollstaendig in einer bekannten Endlage steht. Laeuft bereits eine Bewegung oder ist der Zustand nicht eindeutig, wird die neue Aktion verweigert.
 
 ## Status
 
-Konzept vollstaendig, Skript-Version mit Relais-Architektur vorhanden. Peripheral-Namen, Relay-Namen, Distanzen und Farbwerte sind Platzhalter und muessen an die tatsaechliche Verkabelung angepasst werden. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
