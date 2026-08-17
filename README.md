@@ -113,6 +113,10 @@ Der Installer schreibt zusaetzlich eine `startup.lua`, die `treppe_boden.lua` be
 
 Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das System vollstaendig in einer bekannten Endlage steht. Laeuft bereits eine Bewegung oder ist der Zustand nicht eindeutig, wird die neue Aktion verweigert.
 
+**Automatik** (Redstone-Trigger, Geofence, Menuepunkt 9) prueft dabei den **gesamten** Systemzustand -- alle 3 Module muessen gemeinsam bestaetigt sein.
+
+**Manuelle Einzeltests** (Menuepunkte 4/5/6) pruefen nur, ob gerade schon eine andere Bewegung laeuft -- NICHT den Zustand der anderen Module. So laesst sich jedes Modul einzeln kalibrieren/testen, auch wenn andere Module noch nicht vollstaendig verkabelt sind.
+
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
