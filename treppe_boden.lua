@@ -211,6 +211,16 @@ local function verriegelungAnfordern()
     return true
 end
 
+-- Fuer manuelle Einzeltests (Menuepunkte 4/5/6): prueft NUR, ob gerade
+-- schon eine andere Bewegung laeuft -- NICHT, ob das gesamte System
+-- (alle 3 Module) in Endlage ist. So lassen sich Module einzeln testen,
+-- auch wenn andere Module noch nicht vollstaendig verkabelt/bestaetigt sind.
+local function verriegelungAnfordernManuell()
+    if verriegelt then return false end
+    verriegelt = true
+    return true
+end
+
 local function verriegelungFreigeben()
     verriegelt = false
 end
@@ -495,7 +505,7 @@ end
 
 local function treppe1Manuell()
     print("")
-    if not verriegelungAnfordern() then
+    if not verriegelungAnfordernManuell() then
         print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
         print("Weiter mit beliebiger Taste ...")
         read()
@@ -513,7 +523,7 @@ end
 
 local function treppe2Manuell()
     print("")
-    if not verriegelungAnfordern() then
+    if not verriegelungAnfordernManuell() then
         print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
         print("Weiter mit beliebiger Taste ...")
         read()
@@ -529,7 +539,7 @@ end
 
 local function bodenManuell()
     print("")
-    if not verriegelungAnfordern() then
+    if not verriegelungAnfordernManuell() then
         print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
         print("Weiter mit beliebiger Taste ...")
         read()
