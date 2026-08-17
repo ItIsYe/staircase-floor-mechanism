@@ -170,8 +170,6 @@ local relay_boden_sichtbar_bestaetigt = {
     end
 }
 
-local RELAY_SEITE = cfg.redstone_relais.seite
-
 local playerDetector = peripheral.find("playerDetector")
 
 local RS_TRIGGER_SIDE = cfg.redstone_trigger.seite
@@ -187,12 +185,25 @@ local verriegelt = false
 -- Relais-Hilfsfunktionen
 -- ============================================
 
+-- Die konkrete Seite ist am Relay physisch egal (jedes Relay traegt nur
+-- ein Signal) -- die Peripheral-API verlangt aber immer eine Seite als
+-- Parameter. Deshalb: bei Eingaengen alle 6 Seiten pruefen (ODER-
+-- Verknuepfung), bei Ausgaengen alle 6 Seiten gleichzeitig setzen.
+local ALLE_SEITEN = { "top", "bottom", "left", "right", "front", "back" }
+
 local function relaisAn(inputRelay)
-    return inputRelay.getInput(RELAY_SEITE)
+    for _, seite in ipairs(ALLE_SEITEN) do
+        if inputRelay.getInput(seite) then
+            return true
+        end
+    end
+    return false
 end
 
 local function relaisSetzen(outputRelay, an)
-    outputRelay.setOutput(RELAY_SEITE, an)
+    for _, seite in ipairs(ALLE_SEITEN) do
+        outputRelay.setOutput(seite, an)
+    end
 end
 
 local function inEndlage()
