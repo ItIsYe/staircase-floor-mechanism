@@ -60,11 +60,17 @@ end
 local function findGearshift(exakterName)
     local p = peripheral.wrap(exakterName)
     if not p then
-        print("FEHLER: Gearshift '" .. exakterName .. "' nicht gefunden.")
-        print("Vorhandene Peripherals:")
-        for _, name in ipairs(peripheral.getNames()) do
-            print("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
+        local f = fs.open("relay_fehler.txt", "w")
+        f.write("Gesuchter Gearshift-Name (nicht gefunden): " .. exakterName .. "\n\n")
+        f.write("Vorhandene Peripherals:\n")
+        local namen = peripheral.getNames()
+        table.sort(namen)
+        for _, name in ipairs(namen) do
+            f.write("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")\n")
         end
+        f.close()
+        print("FEHLER: Gearshift '" .. exakterName .. "' nicht gefunden.")
+        print("Details in relay_fehler.txt gespeichert (edit relay_fehler.txt)")
         error("Bitte config.lua mit dem richtigen Peripheral-Namen aktualisieren.")
     end
     return p
@@ -81,11 +87,17 @@ end
 local function findRelay(exakterName)
     local p = peripheral.wrap(exakterName)
     if not p then
-        print("FEHLER: Redstone Relay '" .. exakterName .. "' nicht gefunden.")
-        print("Vorhandene Peripherals:")
-        for _, name in ipairs(peripheral.getNames()) do
-            print("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
+        local f = fs.open("relay_fehler.txt", "w")
+        f.write("Gesuchter Relay-Name (nicht gefunden): " .. exakterName .. "\n\n")
+        f.write("Vorhandene Peripherals:\n")
+        local namen = peripheral.getNames()
+        table.sort(namen)
+        for _, name in ipairs(namen) do
+            f.write("  " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")\n")
         end
+        f.close()
+        print("FEHLER: Redstone Relay '" .. exakterName .. "' nicht gefunden.")
+        print("Details in relay_fehler.txt gespeichert (edit relay_fehler.txt)")
         error("Bitte config.lua mit dem richtigen Relay-Namen aktualisieren.")
     end
     return p
