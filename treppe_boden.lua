@@ -253,13 +253,15 @@ local function warteAufRelay(inputRelay, zielZustand)
     return true
 end
 
-local function bodenBewegen(gearshift, distanz, richtung, zielRelay)
+local function bodenBewegen(gearshift, distanz, richtung, zielRelay, beschreibung)
+    print("Boden: " .. beschreibung .. " ...")
     relaisSetzen(relay_boden_z, true)
     relaisSetzen(relay_boden_x, true)
     gearshift.move(distanz, richtung)
     warteAufRelay(zielRelay, true)
     relaisSetzen(relay_boden_z, false)
     relaisSetzen(relay_boden_x, false)
+    print("Boden: " .. beschreibung .. " fertig.")
 end
 
 -- ============================================
@@ -267,6 +269,10 @@ end
 -- ============================================
 
 local function treppeVerschwinden()
+    print("")
+    print("=== Ablauf: Treppe -> Boden ===")
+
+    print("Treppe1 + Treppe2: fahre ein ...")
     relaisSetzen(relay_treppe1_z, true)
     treppe1_ein.move(runtime.treppe1, RICHTUNG_T1_EIN)
     treppe2_ein.move(runtime.treppe2, RICHTUNG_T2_EIN)
@@ -274,15 +280,22 @@ local function treppeVerschwinden()
     warteAufRelay(relay_t1_grund_bestaetigt, true)
     warteAufRelay(relay_t2_y_eingefahren, true)
     relaisSetzen(relay_treppe1_z, false)
+    print("Treppe1 + Treppe2: eingefahren, bestaetigt.")
 
-    bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_sichtbar_bestaetigt)
+    bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_sichtbar_bestaetigt, "fahre aus (X/Z/Drehung)")
 
     zustand = "boden"
+    print("=== Ablauf fertig: Boden sichtbar ===")
+    print("")
 end
 
 local function treppeHerstellen()
-    bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_boden_grundstellung_bestaetigt)
+    print("")
+    print("=== Ablauf: Boden -> Treppe (Grundstellung) ===")
 
+    bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_boden_grundstellung_bestaetigt, "fahre ein (X/Z/Drehung)")
+
+    print("Treppe1 + Treppe2: fahre aus ...")
     relaisSetzen(relay_treppe1_z, true)
     treppe1_aus.move(runtime.treppe1, RICHTUNG_T1_AUS)
     treppe2_aus.move(runtime.treppe2, RICHTUNG_T2_AUS)
@@ -290,8 +303,11 @@ local function treppeHerstellen()
     warteAufRelay(relay_t1_treppe_bestaetigt, true)
     warteAufRelay(relay_t2_y_ausgefahren, true)
     relaisSetzen(relay_treppe1_z, false)
+    print("Treppe1 + Treppe2: ausgefahren, bestaetigt.")
 
     zustand = "treppe"
+    print("=== Ablauf fertig: Grundstellung (Treppe sichtbar) ===")
+    print("")
 end
 
 local function ausloesen()
@@ -516,8 +532,8 @@ local function bodenManuell()
     print("Boden: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    if r == "a" then bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_sichtbar_bestaetigt)
-    elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_boden_grundstellung_bestaetigt) end
+    if r == "a" then bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_sichtbar_bestaetigt, "fahre aus (manuell)")
+    elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_boden_grundstellung_bestaetigt, "fahre ein (manuell)") end
     verriegelungFreigeben()
 end
 
