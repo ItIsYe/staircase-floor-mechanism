@@ -497,6 +497,8 @@ local function treppe1Manuell()
     print("")
     if not verriegelungAnfordern() then
         print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+        print("Weiter mit beliebiger Taste ...")
+        read()
         return
     end
     print("Treppe1: a=ausfahren, e=einfahren")
@@ -513,6 +515,8 @@ local function treppe2Manuell()
     print("")
     if not verriegelungAnfordern() then
         print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+        print("Weiter mit beliebiger Taste ...")
+        read()
         return
     end
     print("Treppe2: a=ausfahren, e=einfahren")
@@ -527,6 +531,8 @@ local function bodenManuell()
     print("")
     if not verriegelungAnfordern() then
         print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+        print("Weiter mit beliebiger Taste ...")
+        read()
         return
     end
     print("Boden: a=ausfahren, e=einfahren")
