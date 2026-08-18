@@ -26,7 +26,6 @@ local RUNTIME_FILE = "treppe_runtime.cfg"
 
 local runtime = {
     treppe1_z = cfg.distanzen.treppe1_z,  -- nur Richtung "ausfahren", "einfahren" ist auto-kalibriert
-    treppe2 = cfg.distanzen.treppe2,
     boden_z = cfg.distanzen.boden_z,
     boden_a = cfg.distanzen.boden_a,
 
@@ -359,6 +358,12 @@ local function treppe1Einfahren()
     treppe1Y(treppe1_ein, RICHTUNG_T1_Y_EIN, relay_t1_y_eingefahren, "faehrt ein")
 end
 
+-- Treppe2 hat nur eine Achse (Y), beide Endpunkte haben einen Kontakt --
+-- Auto-Kalibrierung wie bei Treppe1-Y/Boden-X.
+local function treppe2Y(gearshift, richtung, zielRelay, beschreibung)
+    fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe2 Y: " .. beschreibung)
+end
+
 -- Boden hat nur 2 Gearshifts (aus/ein), aber ALLE 3 Achsen (X, Z, A)
 -- laufen ueber denselben Gearshift. Welche Achse gerade angetrieben wird,
 -- waehlen die Redstone-Signale (relay_boden_x, relay_boden_z) aus:
@@ -416,41 +421,63 @@ end
 
 local function treppeVerschwinden()
     print("")
-    print("=== Ablauf: Treppe -> Boden ===")
+    print("=== Ablauf: Treppe -> Grundstellung ===")
 
-    print("Treppe2: fahre ein ...")
-    treppe2_ein.move(runtime.treppe2, RICHTUNG_T2_EIN)
+    -- Schritt 1: Treppe1 Z faehrt runter
+    treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter")
 
-    treppe1Einfahren()
+    -- Schritt 2: Treppe1 Y und Treppe2 Y GLEICHZEITIG
+    parallel.waitForAll(
+        function() treppe1Y(treppe1_ein, RICHTUNG_T1_Y_EIN, relay_t1_y_eingefahren, "faehrt ein") end,
+        function() treppe2Y(treppe2_ein, RICHTUNG_T2_EIN, relay_t2_y_eingefahren, "faehrt ein") end
+    )
+
+    -- Schritt 3: Boden Drehung
+    bodenA(boden_aus, RICHTUNG_B_A_AUS, "dreht auf 0 Grad")
+
+    -- Schritt 4: Boden X
+    bodenX(boden_aus, RICHTUNG_B_X_AUS, relay_b_x_rechts, "faehrt nach rechts")
+
+    -- Schritt 5: Boden Z
+    bodenZ(boden_aus, RICHTUNG_B_Z_AUS, "faehrt hoch")
 
     warteAufRelay(relay_t1_grund_bestaetigt, true)
     warteAufRelay(relay_t2_y_eingefahren, true)
-    print("Treppe1 + Treppe2: eingefahren, bestaetigt.")
-
-    bodenAusfahren()
+    warteAufRelay(relay_boden_ausgefahren_bestaetigt, true)
+    print("Alle Module bestaetigt.")
 
     zustand = "boden"
-    print("=== Ablauf fertig: Boden sichtbar ===")
+    print("=== Ablauf fertig: Grundstellung (Boden sichtbar) ===")
     print("")
 end
 
 local function treppeHerstellen()
     print("")
-    print("=== Ablauf: Boden -> Treppe (Grundstellung) ===")
+    print("=== Ablauf: Grundstellung -> Treppe ===")
 
-    bodenEinfahren()
+    -- Schritt 1: Boden Z faehrt runter
+    bodenZ(boden_ein, RICHTUNG_B_Z_EIN, "faehrt runter")
 
-    print("Treppe2: fahre aus ...")
-    treppe2_aus.move(runtime.treppe2, RICHTUNG_T2_AUS)
+    -- Schritt 2: Boden X
+    bodenX(boden_ein, RICHTUNG_B_X_EIN, relay_b_x_links, "faehrt nach links")
 
-    treppe1Ausfahren()
+    -- Schritt 3: Boden Drehung, Treppe1 Y und Treppe2 Y GLEICHZEITIG
+    parallel.waitForAll(
+        function() bodenA(boden_ein, RICHTUNG_B_A_EIN, "dreht auf 90 Grad") end,
+        function() treppe1Y(treppe1_aus, RICHTUNG_T1_Y_AUS, relay_t1_y_ausgefahren, "faehrt aus") end,
+        function() treppe2Y(treppe2_aus, RICHTUNG_T2_AUS, relay_t2_y_ausgefahren, "faehrt aus") end
+    )
+
+    -- Schritt 4: Treppe1 Z faehrt hoch
+    treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch")
 
     warteAufRelay(relay_t1_treppe_bestaetigt, true)
     warteAufRelay(relay_t2_y_ausgefahren, true)
-    print("Treppe1 + Treppe2: ausgefahren, bestaetigt.")
+    warteAufRelay(relay_boden_eingefahren_bestaetigt, true)
+    print("Alle Module bestaetigt.")
 
     zustand = "treppe"
-    print("=== Ablauf fertig: Grundstellung (Treppe sichtbar) ===")
+    print("=== Ablauf fertig: Treppe sichtbar ===")
     print("")
 end
 
@@ -554,7 +581,7 @@ local function zeichneUI()
     print("-- Distanzen (Blocke) --")
     print("1) Treppe1 Y: auto-kalibriert")
     print("8) Treppe1 Z (ausfahren): " .. runtime.treppe1_z)
-    print("2) Treppe2: " .. runtime.treppe2)
+    print("2) Treppe2: auto-kalibriert")
     print("3) Boden X: auto-kalibriert")
     print("7) Boden Z: " .. runtime.boden_z)
     print("")
@@ -669,8 +696,8 @@ local function treppe2Manuell()
     print("Treppe2: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    if r == "a" then treppe2_aus.move(runtime.treppe2, RICHTUNG_T2_AUS)
-    elseif r == "e" then treppe2_ein.move(runtime.treppe2, RICHTUNG_T2_EIN) end
+    if r == "a" then treppe2Y(treppe2_aus, RICHTUNG_T2_AUS, relay_t2_y_ausgefahren, "faehrt aus")
+    elseif r == "e" then treppe2Y(treppe2_ein, RICHTUNG_T2_EIN, relay_t2_y_eingefahren, "faehrt ein") end
     verriegelungFreigeben()
 end
 
@@ -697,9 +724,6 @@ local function uiSchleife()
 
         if auswahl == "8" then
             runtime.treppe1_z = zahlEingabe("Neue Distanz Treppe1 Z (ausfahren)", runtime.treppe1_z)
-            speichereRuntime()
-        elseif auswahl == "2" then
-            runtime.treppe2 = zahlEingabe("Neue Distanz Treppe2", runtime.treppe2)
             speichereRuntime()
         elseif auswahl == "7" then
             runtime.boden_z = zahlEingabe("Neue Distanz Boden Z", runtime.boden_z)
