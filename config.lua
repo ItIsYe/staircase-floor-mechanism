@@ -101,8 +101,8 @@ return {
     distanzen = {
         -- treppe1_y, treppe2, boden_x sind auto-kalibriert (Kontakt an
         -- beiden Endpunkten vorhanden) -- keine feste Distanz noetig.
-        treppe1_z = 4,  -- Treppe1 Z-Achse, nur Richtung "ausfahren" (kein Kontakt fuer "oben")
-        boden_z = 2,   -- Boden Z-Achse Distanz
+        treppe1_z = 5,  -- Treppe1 Z-Achse, nur Richtung "ausfahren" (kein Kontakt fuer "oben")
+        boden_z = 5,   -- Boden Z-Achse Distanz
         boden_a = 90,  -- Boden Drehwinkel (immer 0/90 Grad, i.d.R. nicht aendern)
     },
 
