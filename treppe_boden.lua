@@ -154,17 +154,18 @@ local relay_b_x_rechts = findRelay(cfg.redstone_relais.eingaenge.boden_x_rechts)
 local relay_b_z_unten_a90 = findRelay(cfg.redstone_relais.eingaenge.boden_z_unten_a90)
 local relay_b_z_oben_a0   = findRelay(cfg.redstone_relais.eingaenge.boden_z_oben_a0)
 
--- Boden "Grundstellung" (Treppe sichtbar): X rechts UND Z-oben+A0-Kontakt
--- zusammen -- beide zusammen bestaetigen alle 3 Achsen (X, Z, A).
-local relay_boden_grundstellung_bestaetigt = {
+-- Boden "Grundstellung" (X rechts + Z oben + A 0Grad) bedeutet: Boden ist
+-- AUSGEFAHREN/sichtbar -- das gehoert zum Gesamtzustand "boden" (Treppe
+-- NICHT sichtbar), nicht zu "treppe".
+local relay_boden_ausgefahren_bestaetigt = {
     getInput = function(side)
         return relay_b_x_rechts.getInput(side) and relay_b_z_oben_a0.getInput(side)
     end
 }
 
--- Boden "sichtbar" (Treppe weg): X links UND Z-unten+A90-Kontakt zusammen --
--- beide zusammen bestaetigen ebenfalls alle 3 Achsen (X, Z, A).
-local relay_boden_sichtbar_bestaetigt = {
+-- Boden "eingefahren" (X links + Z unten + A 90Grad) bedeutet: Boden ist
+-- zurueckgezogen -- das gehoert zum Gesamtzustand "treppe" (Treppe sichtbar).
+local relay_boden_eingefahren_bestaetigt = {
     getInput = function(side)
         return relay_b_x_links.getInput(side) and relay_b_z_unten_a90.getInput(side)
     end
@@ -208,9 +209,9 @@ end
 
 local function inEndlage()
     if zustand == "treppe" then
-        return relaisAn(relay_t1_treppe_bestaetigt) and relaisAn(relay_t2_y_ausgefahren) and relaisAn(relay_boden_grundstellung_bestaetigt)
+        return relaisAn(relay_t1_treppe_bestaetigt) and relaisAn(relay_t2_y_ausgefahren) and relaisAn(relay_boden_eingefahren_bestaetigt)
     elseif zustand == "boden" then
-        return relaisAn(relay_t1_grund_bestaetigt) and relaisAn(relay_t2_y_eingefahren) and relaisAn(relay_boden_sichtbar_bestaetigt)
+        return relaisAn(relay_t1_grund_bestaetigt) and relaisAn(relay_t2_y_eingefahren) and relaisAn(relay_boden_ausgefahren_bestaetigt)
     end
     return false
 end
@@ -303,7 +304,7 @@ local function treppeVerschwinden()
     relaisSetzen(relay_treppe1_z, false)
     print("Treppe1 + Treppe2: eingefahren, bestaetigt.")
 
-    bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_sichtbar_bestaetigt, "fahre aus (X/Z/Drehung)")
+    bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_ausgefahren_bestaetigt, "fahre aus (X/Z/Drehung)")
 
     zustand = "boden"
     print("=== Ablauf fertig: Boden sichtbar ===")
@@ -314,7 +315,7 @@ local function treppeHerstellen()
     print("")
     print("=== Ablauf: Boden -> Treppe (Grundstellung) ===")
 
-    bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_boden_grundstellung_bestaetigt, "fahre ein (X/Z/Drehung)")
+    bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_boden_eingefahren_bestaetigt, "fahre ein (X/Z/Drehung)")
 
     print("Treppe1 + Treppe2: fahre aus ...")
     relaisSetzen(relay_treppe1_z, true)
@@ -360,8 +361,8 @@ end
 local function zustandInitialisieren()
     print("Initialisiere Zustand ueber Relais-Kontakte ...")
 
-    local treppeErkannt = relaisAn(relay_t1_treppe_bestaetigt) and relaisAn(relay_t2_y_ausgefahren) and relaisAn(relay_boden_grundstellung_bestaetigt)
-    local bodenErkannt  = relaisAn(relay_t1_grund_bestaetigt) and relaisAn(relay_t2_y_eingefahren) and relaisAn(relay_boden_sichtbar_bestaetigt)
+    local treppeErkannt = relaisAn(relay_t1_treppe_bestaetigt) and relaisAn(relay_t2_y_ausgefahren) and relaisAn(relay_boden_eingefahren_bestaetigt)
+    local bodenErkannt  = relaisAn(relay_t1_grund_bestaetigt) and relaisAn(relay_t2_y_eingefahren) and relaisAn(relay_boden_ausgefahren_bestaetigt)
 
     if treppeErkannt and not bodenErkannt then
         zustand = "treppe"
@@ -559,8 +560,8 @@ local function bodenManuell()
     print("Boden: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    if r == "a" then bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_sichtbar_bestaetigt, "fahre aus (manuell)")
-    elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_boden_grundstellung_bestaetigt, "fahre ein (manuell)") end
+    if r == "a" then bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_ausgefahren_bestaetigt, "fahre aus (manuell)")
+    elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_boden_eingefahren_bestaetigt, "fahre ein (manuell)") end
     verriegelungFreigeben()
 end
 
