@@ -81,6 +81,23 @@ Nicht jede Achsen-Position hat einen eigenen Kontakt -- manche Kontakte bestaeti
 
 Die konkrete Blockseite ist an jedem Relay physisch egal, weil jedes Relay nur ein einziges Signal traegt -- die Peripheral-API verlangt aber trotzdem immer eine Seite als Parameter. Deshalb prueft der Code bei jedem Eingangs-Relay automatisch **alle 6 Seiten** (ODER-Verknuepfung: irgendeine Seite aktiv reicht) und setzt bei jedem Ausgangs-Relay **alle 6 Seiten gleichzeitig**. Das `seite`-Feld in `config.lua` wird dadurch nicht mehr verwendet -- egal wie die Relais im Spiel ausgerichtet sind, es wird trotzdem erkannt.
 
+## Boden-Achsensteuerung (kein interner Sequenzeditor)
+
+Boden hat nur 2 Sequenced Gearshifts (`boden_ausfahren`/`boden_einfahren`), aber alle 3 Achsen (X, Z, A) laufen ueber denselben Gearshift -- welche Achse gerade angetrieben wird, waehlen die Redstone-Ausgangs-Relais als Achsen-Selektor:
+
+- **X-Achse:** kein Signal
+- **Z-Achse:** `boden_z`-Ausgangs-Relay an
+- **A-Achse (Drehung):** `boden_x`- UND `boden_z`-Ausgangs-Relay an
+
+Da der Gearshift selbst keine interne Sequenz programmiert hat, steuert das Lua-Skript die 3 Achsen als **separate, nacheinander ausgefuehrte Schritte**, jeweils mit `isRunning()`-Polling zwischen den Schritten (da es fuer Zwischenzustaende keine Relay-Kontakte gibt):
+
+- **Einfahren** (Grundstellung -> Treppe sichtbar): Z (runter) -> X (nach links) -> A (Drehung auf 90 Grad)
+- **Ausfahren** (Treppe -> Grundstellung): A (Drehung auf 0 Grad) -> X (nach rechts) -> Z (hoch)
+
+Erst nach dem letzten Teilschritt wird per Relay-Kontakt die finale Endlage bestaetigt.
+
+X-, Z-Distanz und der Drehwinkel sind in `config.lua` unter `distanzen.boden_x`/`boden_z`/`boden_a` getrennt einstellbar (auch live im Programm, Menuepunkte 3 und 7). Jede der 3 Achsen hat zudem einen eigenen Richtungsmodifier unter `richtung` (`boden_x_ausfahren`, `boden_z_einfahren` usw.).
+
 ## Redstone-Ausgaenge (Ansteuerung, unveraendert)
 
 | Signal | Relay |
