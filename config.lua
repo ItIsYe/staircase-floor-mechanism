@@ -14,7 +14,7 @@
 
 return {
 
-    config_version = 15,
+    config_version = 16,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -139,6 +139,16 @@ return {
 
     -- Sonstiges
     timeout_sekunden = 15,
+
+    -- Auto-Kalibrierung: fuer Achsen mit Kontakt an BEIDEN Endpunkten
+    -- (Treppe1-Y, Treppe2-Y, Boden-X, Treppe1-Z nur Richtung "unten")
+    -- wird statt einer festen Distanz in kleinen Schritten gefahren, bis
+    -- der Ziel-Kontakt schaltet. schrittgroesse = Bloecke pro Einzelschritt,
+    -- max_schritte = Sicherheitsabbruch, falls der Kontakt nie kommt.
+    auto_kalibrierung = {
+        schrittgroesse = 1,
+        max_schritte = 32,
+    },
 
 }
 
