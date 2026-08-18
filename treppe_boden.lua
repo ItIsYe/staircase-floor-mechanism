@@ -27,7 +27,9 @@ local RUNTIME_FILE = "treppe_runtime.cfg"
 local runtime = {
     treppe1 = cfg.distanzen.treppe1,
     treppe2 = cfg.distanzen.treppe2,
-    boden   = cfg.distanzen.boden,
+    boden_x = cfg.distanzen.boden_x,
+    boden_z = cfg.distanzen.boden_z,
+    boden_a = cfg.distanzen.boden_a,
 
     rpm_treppe1            = cfg.geschwindigkeiten.rpm.treppe1,
     rpm_treppe2_ausfahren   = cfg.geschwindigkeiten.rpm.treppe2_ausfahren,
@@ -114,8 +116,12 @@ local RICHTUNG_T1_AUS = cfg.richtung.treppe1_ausfahren
 local RICHTUNG_T1_EIN = cfg.richtung.treppe1_einfahren
 local RICHTUNG_T2_AUS = cfg.richtung.treppe2_ausfahren
 local RICHTUNG_T2_EIN = cfg.richtung.treppe2_einfahren
-local RICHTUNG_B_AUS  = cfg.richtung.boden_ausfahren
-local RICHTUNG_B_EIN  = cfg.richtung.boden_einfahren
+local RICHTUNG_B_X_AUS = cfg.richtung.boden_x_ausfahren
+local RICHTUNG_B_X_EIN = cfg.richtung.boden_x_einfahren
+local RICHTUNG_B_Z_AUS = cfg.richtung.boden_z_ausfahren
+local RICHTUNG_B_Z_EIN = cfg.richtung.boden_z_einfahren
+local RICHTUNG_B_A_AUS = cfg.richtung.boden_a_ausfahren
+local RICHTUNG_B_A_EIN = cfg.richtung.boden_a_einfahren
 
 local speed_treppe1           = findSpeedController(cfg.geschwindigkeiten.peripherals.treppe1)
 local speed_treppe2_ausfahren = findSpeedController(cfg.geschwindigkeiten.peripherals.treppe2_ausfahren)
@@ -275,15 +281,71 @@ local function warteAufRelay(inputRelay, zielZustand)
     return true
 end
 
-local function bodenBewegen(gearshift, distanz, richtung, zielRelay, beschreibung)
-    print("Boden: " .. beschreibung .. " ...")
-    relaisSetzen(relay_boden_z, true)
-    relaisSetzen(relay_boden_x, true)
-    gearshift.move(distanz, richtung)
-    warteAufRelay(zielRelay, true)
+-- Wartet, bis der Gearshift seine aktuelle Bewegung beendet hat (Polling
+-- ueber isRunning(), da es fuer Zwischenschritte keine Relay-Kontakte gibt).
+local function wartenBisFertig(gearshift)
+    local start = os.clock()
+    while gearshift.isRunning() do
+        if os.clock() - start > TIMEOUT_S then
+            return false
+        end
+        sleep(0.25)
+    end
+    return true
+end
+
+-- Boden hat nur 2 Gearshifts (aus/ein), aber ALLE 3 Achsen (X, Z, A)
+-- laufen ueber denselben Gearshift. Welche Achse gerade angetrieben wird,
+-- waehlen die Redstone-Signale (relay_boden_x, relay_boden_z) aus:
+--   X-Achse:  kein Signal
+--   Z-Achse:  relay_boden_x an
+--   A-Achse:  relay_boden_x UND relay_boden_z an
+-- Deshalb muessen die 3 Achsen als separate, nacheinander ausgefuehrte
+-- Schritte gesteuert werden.
+
+local function bodenX(gearshift, richtung, beschreibung)
+    print("Boden X: " .. beschreibung .. " ...")
     relaisSetzen(relay_boden_z, false)
     relaisSetzen(relay_boden_x, false)
-    print("Boden: " .. beschreibung .. " fertig.")
+    gearshift.move(runtime.boden_x, richtung)
+    wartenBisFertig(gearshift)
+    print("Boden X: " .. beschreibung .. " fertig.")
+end
+
+local function bodenZ(gearshift, richtung, beschreibung)
+    print("Boden Z: " .. beschreibung .. " ...")
+    relaisSetzen(relay_boden_x, true)
+    gearshift.move(runtime.boden_z, richtung)
+    wartenBisFertig(gearshift)
+    relaisSetzen(relay_boden_x, false)
+    print("Boden Z: " .. beschreibung .. " fertig.")
+end
+
+local function bodenA(gearshift, richtung, beschreibung)
+    print("Boden A: " .. beschreibung .. " ...")
+    relaisSetzen(relay_boden_x, true)
+    relaisSetzen(relay_boden_z, true)
+    gearshift.rotate(runtime.boden_a, richtung)
+    wartenBisFertig(gearshift)
+    relaisSetzen(relay_boden_x, false)
+    relaisSetzen(relay_boden_z, false)
+    print("Boden A: " .. beschreibung .. " fertig.")
+end
+
+-- Kompletter Boden-Ablauf einfahren: Z -> X -> A (Reihenfolge bestaetigt)
+local function bodenEinfahren()
+    bodenZ(boden_ein, RICHTUNG_B_Z_EIN, "faehrt runter")
+    bodenX(boden_ein, RICHTUNG_B_X_EIN, "faehrt nach links")
+    bodenA(boden_ein, RICHTUNG_B_A_EIN, "dreht auf 90 Grad")
+    warteAufRelay(relay_boden_eingefahren_bestaetigt, true)
+end
+
+-- Kompletter Boden-Ablauf ausfahren: A -> X -> Z (umgekehrte Reihenfolge)
+local function bodenAusfahren()
+    bodenA(boden_aus, RICHTUNG_B_A_AUS, "dreht auf 0 Grad")
+    bodenX(boden_aus, RICHTUNG_B_X_AUS, "faehrt nach rechts")
+    bodenZ(boden_aus, RICHTUNG_B_Z_AUS, "faehrt hoch")
+    warteAufRelay(relay_boden_ausgefahren_bestaetigt, true)
 end
 
 -- ============================================
@@ -304,7 +366,7 @@ local function treppeVerschwinden()
     relaisSetzen(relay_treppe1_z, false)
     print("Treppe1 + Treppe2: eingefahren, bestaetigt.")
 
-    bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_ausgefahren_bestaetigt, "fahre aus (X/Z/Drehung)")
+    bodenAusfahren()
 
     zustand = "boden"
     print("=== Ablauf fertig: Boden sichtbar ===")
@@ -315,7 +377,7 @@ local function treppeHerstellen()
     print("")
     print("=== Ablauf: Boden -> Treppe (Grundstellung) ===")
 
-    bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_boden_eingefahren_bestaetigt, "fahre ein (X/Z/Drehung)")
+    bodenEinfahren()
 
     print("Treppe1 + Treppe2: fahre aus ...")
     relaisSetzen(relay_treppe1_z, true)
@@ -432,7 +494,8 @@ local function zeichneUI()
     print("-- Distanzen (Blocke) --")
     print("1) Treppe1: " .. runtime.treppe1)
     print("2) Treppe2: " .. runtime.treppe2)
-    print("3) Boden:   " .. runtime.boden)
+    print("3) Boden X: " .. runtime.boden_x)
+    print("7) Boden Z: " .. runtime.boden_z)
     print("")
     print("-- Geschwindigkeiten (RPM) --")
     print("g) Geschwindigkeiten anzeigen/aendern")
@@ -560,8 +623,8 @@ local function bodenManuell()
     print("Boden: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    if r == "a" then bodenBewegen(boden_aus, runtime.boden, RICHTUNG_B_AUS, relay_boden_ausgefahren_bestaetigt, "fahre aus (manuell)")
-    elseif r == "e" then bodenBewegen(boden_ein, runtime.boden, RICHTUNG_B_EIN, relay_boden_eingefahren_bestaetigt, "fahre ein (manuell)") end
+    if r == "a" then bodenAusfahren()
+    elseif r == "e" then bodenEinfahren() end
     verriegelungFreigeben()
 end
 
@@ -577,7 +640,10 @@ local function uiSchleife()
             runtime.treppe2 = zahlEingabe("Neue Distanz Treppe2", runtime.treppe2)
             speichereRuntime()
         elseif auswahl == "3" then
-            runtime.boden = zahlEingabe("Neue Distanz Boden", runtime.boden)
+            runtime.boden_x = zahlEingabe("Neue Distanz Boden X", runtime.boden_x)
+            speichereRuntime()
+        elseif auswahl == "7" then
+            runtime.boden_z = zahlEingabe("Neue Distanz Boden Z", runtime.boden_z)
             speichereRuntime()
 
         elseif auswahl == "g" then
