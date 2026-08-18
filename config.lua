@@ -14,7 +14,7 @@
 
 return {
 
-    config_version = 16,
+    config_version = 17,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -99,10 +99,9 @@ return {
 
     -- Bewegungsdistanzen in Bloecken
     distanzen = {
-        treppe1_y = 4,  -- Treppe1 Y-Achse Distanz
-        treppe1_z = 4,  -- Treppe1 Z-Achse Distanz
-        treppe2   = 4,
-        boden_x = 2,   -- Boden X-Achse Distanz
+        -- treppe1_y, treppe2, boden_x sind auto-kalibriert (Kontakt an
+        -- beiden Endpunkten vorhanden) -- keine feste Distanz noetig.
+        treppe1_z = 4,  -- Treppe1 Z-Achse, nur Richtung "ausfahren" (kein Kontakt fuer "oben")
         boden_z = 2,   -- Boden Z-Achse Distanz
         boden_a = 90,  -- Boden Drehwinkel (immer 0/90 Grad, i.d.R. nicht aendern)
     },
