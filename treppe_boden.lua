@@ -25,12 +25,13 @@ local cfg = dofile("config.lua")
 local RUNTIME_FILE = "treppe_runtime.cfg"
 
 local runtime = {
-    treppe1_y = cfg.distanzen.treppe1_y,
-    treppe1_z = cfg.distanzen.treppe1_z,
+    treppe1_z = cfg.distanzen.treppe1_z,  -- nur Richtung "ausfahren", "einfahren" ist auto-kalibriert
     treppe2 = cfg.distanzen.treppe2,
-    boden_x = cfg.distanzen.boden_x,
     boden_z = cfg.distanzen.boden_z,
     boden_a = cfg.distanzen.boden_a,
+
+    auto_schrittgroesse = cfg.auto_kalibrierung.schrittgroesse,
+    auto_max_schritte   = cfg.auto_kalibrierung.max_schritte,
 
     rpm_treppe1            = cfg.geschwindigkeiten.rpm.treppe1,
     rpm_treppe2_ausfahren   = cfg.geschwindigkeiten.rpm.treppe2_ausfahren,
@@ -297,41 +298,65 @@ local function wartenBisFertig(gearshift)
     return true
 end
 
+-- Faehrt in kleinen Schritten, bis zielRelay schaltet, statt einer festen
+-- Distanz zu vertrauen. Nur sinnvoll fuer Achsen, die am Zielpunkt einen
+-- eigenen (auch kombinierten) Kontakt haben. Sicherheitsabbruch nach
+-- runtime.auto_max_schritte Schritten, falls der Kontakt nie schaltet.
+local function fahreBisKontakt(gearshift, richtung, zielRelay, beschreibung)
+    print(beschreibung .. " (Auto bis Kontakt) ...")
+    local schritte = 0
+    while not relaisAn(zielRelay) and schritte < runtime.auto_max_schritte do
+        gearshift.move(runtime.auto_schrittgroesse, richtung)
+        wartenBisFertig(gearshift)
+        schritte = schritte + 1
+    end
+    if relaisAn(zielRelay) then
+        print(beschreibung .. ": Kontakt erreicht nach " .. schritte .. " Schritten.")
+        return true
+    else
+        print("WARNUNG: " .. beschreibung .. " -- Kontakt nicht erreicht nach " .. runtime.auto_max_schritte .. " Schritten (Sicherheitsabbruch)")
+        return false
+    end
+end
+
 -- Treppenmodul1 hat 2 Achsenbewegungen (Y, Z) ueber denselben Gearshift.
 -- relay_treppe1_z waehlt aus, welche Achse gerade angetrieben wird:
 --   Y-Achse: kein Signal
 --   Z-Achse: relay_treppe1_z an
 -- Deshalb als 2 separate, nacheinander ausgefuehrte Schritte.
 
-local function treppe1Y(gearshift, richtung, beschreibung)
-    print("Treppe1 Y: " .. beschreibung .. " ...")
+local function treppe1Y(gearshift, richtung, zielRelay, beschreibung)
     relaisSetzen(relay_treppe1_z, false)
-    gearshift.move(runtime.treppe1_y, richtung)
-    wartenBisFertig(gearshift)
-    print("Treppe1 Y: " .. beschreibung .. " fertig.")
+    fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe1 Y: " .. beschreibung)
 end
 
-local function treppe1Z(gearshift, richtung, beschreibung)
-    print("Treppe1 Z: " .. beschreibung .. " ...")
+-- zielRelay optional: nur beim Einfahren (Richtung "unten") vorhanden,
+-- da "oben" keinen eigenen Kontakt hat -- dort bleibt es bei fester Distanz.
+local function treppe1Z(gearshift, richtung, zielRelay, beschreibung)
     relaisSetzen(relay_treppe1_z, true)
-    gearshift.move(runtime.treppe1_z, richtung)
-    wartenBisFertig(gearshift)
+    if zielRelay then
+        fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe1 Z: " .. beschreibung)
+    else
+        print("Treppe1 Z: " .. beschreibung .. " ...")
+        gearshift.move(runtime.treppe1_z, richtung)
+        wartenBisFertig(gearshift)
+        print("Treppe1 Z: " .. beschreibung .. " fertig.")
+    end
     relaisSetzen(relay_treppe1_z, false)
-    print("Treppe1 Z: " .. beschreibung .. " fertig.")
 end
 
 -- Treppe1 ausfahren (Grundstellung -> Treppe sichtbar): Y zuerst, dann Z
 -- (Z darf erst ausfahren, wenn Y bereits ausgefahren ist)
 local function treppe1Ausfahren()
-    treppe1Y(treppe1_aus, RICHTUNG_T1_Y_AUS, "faehrt aus")
-    treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, "faehrt hoch")
+    treppe1Y(treppe1_aus, RICHTUNG_T1_Y_AUS, relay_t1_y_ausgefahren, "faehrt aus")
+    treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch")  -- kein Kontakt fuer "oben"
 end
 
 -- Treppe1 einfahren (Treppe -> Grundstellung): Z zuerst, dann Y
 -- (Y darf erst fahren, wenn Z bereits unten ist)
 local function treppe1Einfahren()
-    treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, "faehrt runter")
-    treppe1Y(treppe1_ein, RICHTUNG_T1_Y_EIN, "faehrt ein")
+    treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter")
+    treppe1Y(treppe1_ein, RICHTUNG_T1_Y_EIN, relay_t1_y_eingefahren, "faehrt ein")
 end
 
 -- Boden hat nur 2 Gearshifts (aus/ein), aber ALLE 3 Achsen (X, Z, A)
@@ -343,13 +368,10 @@ end
 -- Deshalb muessen die 3 Achsen als separate, nacheinander ausgefuehrte
 -- Schritte gesteuert werden.
 
-local function bodenX(gearshift, richtung, beschreibung)
-    print("Boden X: " .. beschreibung .. " ...")
+local function bodenX(gearshift, richtung, zielRelay, beschreibung)
     relaisSetzen(relay_boden_z, false)
     relaisSetzen(relay_boden_x, false)
-    gearshift.move(runtime.boden_x, richtung)
-    wartenBisFertig(gearshift)
-    print("Boden X: " .. beschreibung .. " fertig.")
+    fahreBisKontakt(gearshift, richtung, zielRelay, "Boden X: " .. beschreibung)
 end
 
 local function bodenZ(gearshift, richtung, beschreibung)
@@ -375,7 +397,7 @@ end
 -- Kompletter Boden-Ablauf einfahren: Z -> X -> A (Reihenfolge bestaetigt)
 local function bodenEinfahren()
     bodenZ(boden_ein, RICHTUNG_B_Z_EIN, "faehrt runter")
-    bodenX(boden_ein, RICHTUNG_B_X_EIN, "faehrt nach links")
+    bodenX(boden_ein, RICHTUNG_B_X_EIN, relay_b_x_links, "faehrt nach links")
     bodenA(boden_ein, RICHTUNG_B_A_EIN, "dreht auf 90 Grad")
     warteAufRelay(relay_boden_eingefahren_bestaetigt, true)
 end
@@ -383,7 +405,7 @@ end
 -- Kompletter Boden-Ablauf ausfahren: A -> X -> Z (umgekehrte Reihenfolge)
 local function bodenAusfahren()
     bodenA(boden_aus, RICHTUNG_B_A_AUS, "dreht auf 0 Grad")
-    bodenX(boden_aus, RICHTUNG_B_X_AUS, "faehrt nach rechts")
+    bodenX(boden_aus, RICHTUNG_B_X_AUS, relay_b_x_rechts, "faehrt nach rechts")
     bodenZ(boden_aus, RICHTUNG_B_Z_AUS, "faehrt hoch")
     warteAufRelay(relay_boden_ausgefahren_bestaetigt, true)
 end
@@ -530,11 +552,14 @@ local function zeichneUI()
     print("Status: " .. zustand)
     print("")
     print("-- Distanzen (Blocke) --")
-    print("1) Treppe1 Y: " .. runtime.treppe1_y)
-    print("8) Treppe1 Z: " .. runtime.treppe1_z)
+    print("1) Treppe1 Y: auto-kalibriert")
+    print("8) Treppe1 Z (ausfahren): " .. runtime.treppe1_z)
     print("2) Treppe2: " .. runtime.treppe2)
-    print("3) Boden X: " .. runtime.boden_x)
+    print("3) Boden X: auto-kalibriert")
     print("7) Boden Z: " .. runtime.boden_z)
+    print("")
+    print("-- Auto-Kalibrierung --")
+    print("a) Schrittgroesse: " .. runtime.auto_schrittgroesse .. "  Max. Schritte: " .. runtime.auto_max_schritte)
     print("")
     print("-- Geschwindigkeiten (RPM) --")
     print("g) Geschwindigkeiten anzeigen/aendern")
@@ -670,20 +695,18 @@ local function uiSchleife()
         zeichneUI()
         local auswahl = read()
 
-        if auswahl == "1" then
-            runtime.treppe1_y = zahlEingabe("Neue Distanz Treppe1 Y", runtime.treppe1_y)
-            speichereRuntime()
-        elseif auswahl == "8" then
-            runtime.treppe1_z = zahlEingabe("Neue Distanz Treppe1 Z", runtime.treppe1_z)
+        if auswahl == "8" then
+            runtime.treppe1_z = zahlEingabe("Neue Distanz Treppe1 Z (ausfahren)", runtime.treppe1_z)
             speichereRuntime()
         elseif auswahl == "2" then
             runtime.treppe2 = zahlEingabe("Neue Distanz Treppe2", runtime.treppe2)
             speichereRuntime()
-        elseif auswahl == "3" then
-            runtime.boden_x = zahlEingabe("Neue Distanz Boden X", runtime.boden_x)
-            speichereRuntime()
         elseif auswahl == "7" then
             runtime.boden_z = zahlEingabe("Neue Distanz Boden Z", runtime.boden_z)
+            speichereRuntime()
+        elseif auswahl == "a" then
+            runtime.auto_schrittgroesse = zahlEingabe("Auto-Schrittgroesse", runtime.auto_schrittgroesse)
+            runtime.auto_max_schritte = zahlEingabe("Auto max. Schritte", runtime.auto_max_schritte)
             speichereRuntime()
 
         elseif auswahl == "g" then
