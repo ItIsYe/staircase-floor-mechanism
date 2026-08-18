@@ -14,7 +14,7 @@
 
 return {
 
-    config_version = 13,
+    config_version = 14,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -35,8 +35,17 @@ return {
         treppe1_einfahren = 1,
         treppe2_ausfahren = -1,
         treppe2_einfahren = 1,
-        boden_ausfahren   = -1,
-        boden_einfahren   = 1,
+
+        -- Boden hat 3 separate Achsenbewegungen pro Richtung (X, Z, A),
+        -- da alle 3 ueber denselben Gearshift laufen und die Redstone-
+        -- Signale nur auswaehlen, WELCHE Achse gerade angetrieben wird.
+        -- Jede Achse braucht daher ihren eigenen Richtungsmodifier.
+        boden_x_ausfahren = 1,
+        boden_x_einfahren = -1,
+        boden_z_ausfahren = 1,
+        boden_z_einfahren = -1,
+        boden_a_ausfahren = 1,   -- Drehung zurueck (90 -> 0 Grad)
+        boden_a_einfahren = 1,   -- Drehung (0 -> 90 Grad)
     },
 
     -- Redstone Relais (CC:Tweaked): jedes Signal bekommt sein eigenes,
@@ -83,7 +92,9 @@ return {
     distanzen = {
         treppe1 = 4,
         treppe2 = 4,
-        boden   = 2,
+        boden_x = 2,   -- Boden X-Achse Distanz
+        boden_z = 2,   -- Boden Z-Achse Distanz
+        boden_a = 90,  -- Boden Drehwinkel (immer 0/90 Grad, i.d.R. nicht aendern)
     },
 
     -- Rotation Speed Controller (Create): Treppe1 = ein gemeinsamer
