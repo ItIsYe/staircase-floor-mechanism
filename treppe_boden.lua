@@ -25,7 +25,8 @@ local cfg = dofile("config.lua")
 local RUNTIME_FILE = "treppe_runtime.cfg"
 
 local runtime = {
-    treppe1 = cfg.distanzen.treppe1,
+    treppe1_y = cfg.distanzen.treppe1_y,
+    treppe1_z = cfg.distanzen.treppe1_z,
     treppe2 = cfg.distanzen.treppe2,
     boden_x = cfg.distanzen.boden_x,
     boden_z = cfg.distanzen.boden_z,
@@ -112,8 +113,10 @@ local treppe2_ein = findGearshift(cfg.peripherals.treppe2_einfahren)
 local boden_aus   = findGearshift(cfg.peripherals.boden_ausfahren)
 local boden_ein   = findGearshift(cfg.peripherals.boden_einfahren)
 
-local RICHTUNG_T1_AUS = cfg.richtung.treppe1_ausfahren
-local RICHTUNG_T1_EIN = cfg.richtung.treppe1_einfahren
+local RICHTUNG_T1_Y_AUS = cfg.richtung.treppe1_y_ausfahren
+local RICHTUNG_T1_Y_EIN = cfg.richtung.treppe1_y_einfahren
+local RICHTUNG_T1_Z_AUS = cfg.richtung.treppe1_z_ausfahren
+local RICHTUNG_T1_Z_EIN = cfg.richtung.treppe1_z_einfahren
 local RICHTUNG_T2_AUS = cfg.richtung.treppe2_ausfahren
 local RICHTUNG_T2_EIN = cfg.richtung.treppe2_einfahren
 local RICHTUNG_B_X_AUS = cfg.richtung.boden_x_ausfahren
@@ -294,6 +297,43 @@ local function wartenBisFertig(gearshift)
     return true
 end
 
+-- Treppenmodul1 hat 2 Achsenbewegungen (Y, Z) ueber denselben Gearshift.
+-- relay_treppe1_z waehlt aus, welche Achse gerade angetrieben wird:
+--   Y-Achse: kein Signal
+--   Z-Achse: relay_treppe1_z an
+-- Deshalb als 2 separate, nacheinander ausgefuehrte Schritte.
+
+local function treppe1Y(gearshift, richtung, beschreibung)
+    print("Treppe1 Y: " .. beschreibung .. " ...")
+    relaisSetzen(relay_treppe1_z, false)
+    gearshift.move(runtime.treppe1_y, richtung)
+    wartenBisFertig(gearshift)
+    print("Treppe1 Y: " .. beschreibung .. " fertig.")
+end
+
+local function treppe1Z(gearshift, richtung, beschreibung)
+    print("Treppe1 Z: " .. beschreibung .. " ...")
+    relaisSetzen(relay_treppe1_z, true)
+    gearshift.move(runtime.treppe1_z, richtung)
+    wartenBisFertig(gearshift)
+    relaisSetzen(relay_treppe1_z, false)
+    print("Treppe1 Z: " .. beschreibung .. " fertig.")
+end
+
+-- Treppe1 ausfahren (Grundstellung -> Treppe sichtbar): Y zuerst, dann Z
+-- (Z darf erst ausfahren, wenn Y bereits ausgefahren ist)
+local function treppe1Ausfahren()
+    treppe1Y(treppe1_aus, RICHTUNG_T1_Y_AUS, "faehrt aus")
+    treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, "faehrt hoch")
+end
+
+-- Treppe1 einfahren (Treppe -> Grundstellung): Z zuerst, dann Y
+-- (Y darf erst fahren, wenn Z bereits unten ist)
+local function treppe1Einfahren()
+    treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, "faehrt runter")
+    treppe1Y(treppe1_ein, RICHTUNG_T1_Y_EIN, "faehrt ein")
+end
+
 -- Boden hat nur 2 Gearshifts (aus/ein), aber ALLE 3 Achsen (X, Z, A)
 -- laufen ueber denselben Gearshift. Welche Achse gerade angetrieben wird,
 -- waehlen die Redstone-Signale (relay_boden_x, relay_boden_z) aus:
@@ -356,14 +396,13 @@ local function treppeVerschwinden()
     print("")
     print("=== Ablauf: Treppe -> Boden ===")
 
-    print("Treppe1 + Treppe2: fahre ein ...")
-    relaisSetzen(relay_treppe1_z, true)
-    treppe1_ein.move(runtime.treppe1, RICHTUNG_T1_EIN)
+    print("Treppe2: fahre ein ...")
     treppe2_ein.move(runtime.treppe2, RICHTUNG_T2_EIN)
+
+    treppe1Einfahren()
 
     warteAufRelay(relay_t1_grund_bestaetigt, true)
     warteAufRelay(relay_t2_y_eingefahren, true)
-    relaisSetzen(relay_treppe1_z, false)
     print("Treppe1 + Treppe2: eingefahren, bestaetigt.")
 
     bodenAusfahren()
@@ -379,14 +418,13 @@ local function treppeHerstellen()
 
     bodenEinfahren()
 
-    print("Treppe1 + Treppe2: fahre aus ...")
-    relaisSetzen(relay_treppe1_z, true)
-    treppe1_aus.move(runtime.treppe1, RICHTUNG_T1_AUS)
+    print("Treppe2: fahre aus ...")
     treppe2_aus.move(runtime.treppe2, RICHTUNG_T2_AUS)
+
+    treppe1Ausfahren()
 
     warteAufRelay(relay_t1_treppe_bestaetigt, true)
     warteAufRelay(relay_t2_y_ausgefahren, true)
-    relaisSetzen(relay_treppe1_z, false)
     print("Treppe1 + Treppe2: ausgefahren, bestaetigt.")
 
     zustand = "treppe"
@@ -492,7 +530,8 @@ local function zeichneUI()
     print("Status: " .. zustand)
     print("")
     print("-- Distanzen (Blocke) --")
-    print("1) Treppe1: " .. runtime.treppe1)
+    print("1) Treppe1 Y: " .. runtime.treppe1_y)
+    print("8) Treppe1 Z: " .. runtime.treppe1_z)
     print("2) Treppe2: " .. runtime.treppe2)
     print("3) Boden X: " .. runtime.boden_x)
     print("7) Boden Z: " .. runtime.boden_z)
@@ -589,10 +628,8 @@ local function treppe1Manuell()
     print("Treppe1: a=ausfahren, e=einfahren")
     write("> ")
     local r = read()
-    relaisSetzen(relay_treppe1_z, true)
-    if r == "a" then treppe1_aus.move(runtime.treppe1, RICHTUNG_T1_AUS)
-    elseif r == "e" then treppe1_ein.move(runtime.treppe1, RICHTUNG_T1_EIN) end
-    relaisSetzen(relay_treppe1_z, false)
+    if r == "a" then treppe1Ausfahren()
+    elseif r == "e" then treppe1Einfahren() end
     verriegelungFreigeben()
 end
 
@@ -634,7 +671,10 @@ local function uiSchleife()
         local auswahl = read()
 
         if auswahl == "1" then
-            runtime.treppe1 = zahlEingabe("Neue Distanz Treppe1", runtime.treppe1)
+            runtime.treppe1_y = zahlEingabe("Neue Distanz Treppe1 Y", runtime.treppe1_y)
+            speichereRuntime()
+        elseif auswahl == "8" then
+            runtime.treppe1_z = zahlEingabe("Neue Distanz Treppe1 Z", runtime.treppe1_z)
             speichereRuntime()
         elseif auswahl == "2" then
             runtime.treppe2 = zahlEingabe("Neue Distanz Treppe2", runtime.treppe2)
