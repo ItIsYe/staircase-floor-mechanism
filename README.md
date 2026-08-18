@@ -94,34 +94,31 @@ Nicht moeglich fuer **Boden-Z** und **Boden-A** (Drehung), da dort nur kombinier
 
 Schrittgroesse und Sicherheitsabbruch (max. Schritte, falls der Kontakt nie kommt) sind in `config.lua` unter `auto_kalibrierung` einstellbar, auch live im Programm unter Menuepunkt `a`.
 
-**Hinweis:** Treppe2 laeuft bewusst weiterhin mit fester Distanz, nicht Auto-Kalibrierung -- sie startet parallel zu Treppe1s Sequenz, und eine blockierende Schritt-fuer-Schritt-Fahrt wuerde diese Parallelitaet aufheben und den Ablauf verlangsamen.
+## Gesamtablauf: Reihenfolge und Parallelitaet
 
-## Treppe1- und Boden-Achsensteuerung (kein interner Sequenzeditor)
+Treppenmodul1 (Y, Z) und Boden (X, Z, A) laufen jeweils ueber einen einzigen Gearshift pro Richtung -- welche Achse gerade angetrieben wird, waehlen die Redstone-Ausgangs-Relais als Achsen-Selektor:
 
-Treppenmodul1 hat 2 Achsenbewegungen (Y, Z) ueber denselben Gearshift -- welche Achse gerade angetrieben wird, waehlt das `treppe1_z`-Ausgangs-Relay als Selektor:
+- **Treppe1:** Y-Achse kein Signal, Z-Achse `treppe1_z`-Relay an
+- **Boden:** X-Achse kein Signal, Z-Achse `boden_z`-Relay an, A-Achse (Drehung) `boden_x`- UND `boden_z`-Relay an
 
-- **Y-Achse:** kein Signal
-- **Z-Achse:** `treppe1_z`-Relay an
+Da die Gearshifts selbst keine interne Sequenz programmiert haben, steuert das Lua-Skript alle Achsen als separate Schritte, mit `isRunning()`-Polling zwischen den Schritten (da es fuer Zwischenzustaende keine Relay-Kontakte gibt). Einige Schritte laufen dabei **gleichzeitig** (echte Parallelitaet ueber `parallel.waitForAll`), andere nacheinander:
 
-**Ausfahren** (Grundstellung -> Treppe sichtbar): Y zuerst, dann Z (Z darf erst ausfahren, wenn Y bereits ausgefahren ist)
-**Einfahren** (Treppe -> Grundstellung): Z zuerst, dann Y (Y darf erst fahren, wenn Z bereits unten ist)
+**Grundstellung -> Treppe** (`treppeHerstellen`):
+1. Boden Z faehrt runter (oben -> unten)
+2. Boden X faehrt nach links (rechts -> links)
+3. **Gleichzeitig:** Boden dreht auf 90 Grad, Treppe1 Y faehrt aus, Treppe2 Y faehrt aus
+4. Treppe1 Z faehrt hoch (unten -> oben)
 
-Treppenmodul2 hat dagegen nur eine Achse (Y) und bleibt bei einem einzelnen `move()`-Aufruf ohne Zwischenschritte.
+**Treppe -> Grundstellung** (`treppeVerschwinden`):
+1. Treppe1 Z faehrt runter (oben -> unten)
+2. **Gleichzeitig:** Treppe1 Y faehrt ein, Treppe2 Y faehrt ein
+3. Boden dreht auf 0 Grad (90 -> 0)
+4. Boden X faehrt nach rechts (links -> rechts)
+5. Boden Z faehrt hoch (unten -> oben)
 
-Boden hat nur 2 Sequenced Gearshifts (`boden_ausfahren`/`boden_einfahren`), aber alle 3 Achsen (X, Z, A) laufen ueber denselben Gearshift -- welche Achse gerade angetrieben wird, waehlen die Redstone-Ausgangs-Relais als Achsen-Selektor:
+Erst nach dem letzten Schritt wird fuer alle Module per Relay-Kontakt die finale Endlage bestaetigt.
 
-- **X-Achse:** kein Signal
-- **Z-Achse:** `boden_z`-Ausgangs-Relay an
-- **A-Achse (Drehung):** `boden_x`- UND `boden_z`-Ausgangs-Relay an
-
-Da die Gearshifts selbst keine interne Sequenz programmiert haben, steuert das Lua-Skript alle diese Achsen als **separate, nacheinander ausgefuehrte Schritte**, jeweils mit `isRunning()`-Polling zwischen den Schritten (da es fuer Zwischenzustaende keine Relay-Kontakte gibt):
-
-- **Boden einfahren** (Grundstellung -> Treppe sichtbar): Z (runter) -> X (nach links) -> A (Drehung auf 90 Grad)
-- **Boden ausfahren** (Treppe -> Grundstellung): A (Drehung auf 0 Grad) -> X (nach rechts) -> Z (hoch)
-
-Erst nach dem letzten Teilschritt (Treppe1 wie Boden) wird per Relay-Kontakt die finale Endlage bestaetigt.
-
-Distanzen sind in `config.lua` unter `distanzen.treppe1_y`/`treppe1_z`/`boden_x`/`boden_z`/`boden_a` getrennt einstellbar (auch live im Programm, Menuepunkte 1, 8, 3 und 7). Jede Achse hat zudem einen eigenen Richtungsmodifier unter `richtung`.
+Distanzen fuer die nicht auto-kalibrierten Achsen sind in `config.lua` unter `distanzen.treppe1_z`/`boden_z`/`boden_a` einstellbar (auch live im Programm, Menuepunkte 8 und 7). Jede Achse hat zudem einen eigenen Richtungsmodifier unter `richtung`.
 
 ## Redstone-Ausgaenge (Ansteuerung, unveraendert)
 
