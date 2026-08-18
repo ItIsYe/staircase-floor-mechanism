@@ -14,7 +14,7 @@
 
 return {
 
-    config_version = 14,
+    config_version = 15,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -31,8 +31,17 @@ return {
     -- Vorzeichen umdrehen -- kein Code-Aendern noetig. Zum Testen: einzeln
     -- ueber die manuelle Fahrt (Menuepunkte 4/5/6) beobachten und anpassen.
     richtung = {
-        treppe1_ausfahren = -1,
-        treppe1_einfahren = 1,
+        -- Treppenmodul1 hat 2 Achsenbewegungen (Y, Z) ueber denselben
+        -- Gearshift -- relay_treppe1_z waehlt aus, welche Achse gerade
+        -- angetrieben wird (kein Signal = Y, Signal an = Z). Startwert
+        -- uebernommen aus der bisherigen Kalibrierung, ggf. pro Achse
+        -- separat nachjustieren.
+        treppe1_y_ausfahren = -1,
+        treppe1_y_einfahren = 1,
+        treppe1_z_ausfahren = -1,
+        treppe1_z_einfahren = 1,
+
+        -- Treppenmodul2 hat nur eine Achse (Y) -- unveraendert
         treppe2_ausfahren = -1,
         treppe2_einfahren = 1,
 
@@ -90,8 +99,9 @@ return {
 
     -- Bewegungsdistanzen in Bloecken
     distanzen = {
-        treppe1 = 4,
-        treppe2 = 4,
+        treppe1_y = 4,  -- Treppe1 Y-Achse Distanz
+        treppe1_z = 4,  -- Treppe1 Z-Achse Distanz
+        treppe2   = 4,
         boden_x = 2,   -- Boden X-Achse Distanz
         boden_z = 2,   -- Boden Z-Achse Distanz
         boden_a = 90,  -- Boden Drehwinkel (immer 0/90 Grad, i.d.R. nicht aendern)
