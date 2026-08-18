@@ -81,6 +81,21 @@ Nicht jede Achsen-Position hat einen eigenen Kontakt -- manche Kontakte bestaeti
 
 Die konkrete Blockseite ist an jedem Relay physisch egal, weil jedes Relay nur ein einziges Signal traegt -- die Peripheral-API verlangt aber trotzdem immer eine Seite als Parameter. Deshalb prueft der Code bei jedem Eingangs-Relay automatisch **alle 6 Seiten** (ODER-Verknuepfung: irgendeine Seite aktiv reicht) und setzt bei jedem Ausgangs-Relay **alle 6 Seiten gleichzeitig**. Das `seite`-Feld in `config.lua` wird dadurch nicht mehr verwendet -- egal wie die Relais im Spiel ausgerichtet sind, es wird trotzdem erkannt.
 
+## Auto-Kalibrierung (Achsen mit Kontakt an beiden Endpunkten)
+
+Fuer Achsen, die an **beiden** Endpunkten einen eigenen Kontakt haben, wird statt einer festen Distanz in kleinen Schritten gefahren, bis der Ziel-Kontakt schaltet:
+
+- **Treppe1-Y** (aus- und einfahren)
+- **Treppe2-Y** (aus- und einfahren)
+- **Boden-X** (links und rechts)
+- **Treppe1-Z**, nur Richtung "unten" (einfahren) -- "oben" hat keinen Kontakt, bleibt daher bei fester Distanz
+
+Nicht moeglich fuer **Boden-Z** und **Boden-A** (Drehung), da dort nur kombinierte Kontakte existieren, die waehrend des jeweiligen Einzelschritts noch nicht zuverlaessig auswertbar sind -- diese bleiben bei fester Distanz/festem Winkel (`config.lua`: `distanzen.boden_z`/`boden_a`).
+
+Schrittgroesse und Sicherheitsabbruch (max. Schritte, falls der Kontakt nie kommt) sind in `config.lua` unter `auto_kalibrierung` einstellbar, auch live im Programm unter Menuepunkt `a`.
+
+**Hinweis:** Treppe2 laeuft bewusst weiterhin mit fester Distanz, nicht Auto-Kalibrierung -- sie startet parallel zu Treppe1s Sequenz, und eine blockierende Schritt-fuer-Schritt-Fahrt wuerde diese Parallelitaet aufheben und den Ablauf verlangsamen.
+
 ## Treppe1- und Boden-Achsensteuerung (kein interner Sequenzeditor)
 
 Treppenmodul1 hat 2 Achsenbewegungen (Y, Z) ueber denselben Gearshift -- welche Achse gerade angetrieben wird, waehlt das `treppe1_z`-Ausgangs-Relay als Selektor:
