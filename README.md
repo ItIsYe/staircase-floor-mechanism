@@ -72,10 +72,10 @@ Nicht jede Achsen-Position hat einen eigenen Kontakt -- manche Kontakte bestaeti
 |---|---|---|
 | X links | X eingefahren (Treppe) | `redstone_relay_25` |
 | X rechts | X ausgefahren (Grundstellung) | `redstone_relay_26` |
-| Z unten + A 90 Grad | Z unten UND A 90 Grad zusammen (Boden sichtbar) -- schaltet nur bei X links | `redstone_relay_28` |
-| Z oben + A 0 Grad | Z oben UND A 0 Grad zusammen (Grundstellung) -- schaltet nur wenn A nicht gedreht | `redstone_relay_29` |
+| Z unten + A 90 Grad | Z unten UND A 90 Grad zusammen (Boden eingefahren, Treppe sichtbar) -- schaltet nur bei X links | `redstone_relay_28` |
+| Z oben + A 0 Grad | Z oben UND A 0 Grad zusammen (Boden ausgefahren, Grundstellung) -- schaltet nur wenn A nicht gedreht | `redstone_relay_29` |
 
-"Grundstellung": X-rechts UND Z-oben+A0-Kontakt zusammen -- bestaetigt alle 3 Achsen. "Boden sichtbar": X-links UND Z-unten+A90-Kontakt zusammen -- bestaetigt ebenfalls alle 3 Achsen.
+**Wichtig:** In der Grundstellung ist die Treppe NICHT sichtbar -- Grundstellung bedeutet Boden ausgefahren (X rechts + Z oben + A 0 Grad). "Treppe sichtbar" bedeutet Treppenmodul1+2 Y ausgefahren UND Boden eingefahren (X links + Z unten + A 90 Grad).
 
 ## Seiten-Unabhaengigkeit bei Relais
 
