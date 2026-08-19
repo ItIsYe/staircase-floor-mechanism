@@ -14,7 +14,7 @@
 
 return {
 
-    config_version = 21,
+    config_version = 22,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
