@@ -133,6 +133,15 @@ Wird ein (Advanced) Monitor per Modem am Computer angeschlossen erkannt, zeigt d
 
 Der Monitor aktualisiert sich automatisch bei Zustandsaenderungen (auch wenn die Aenderung durch Redstone-Trigger oder Geofence im Hintergrund ausgeloest wurde), nicht nur bei eigenen Touch-Eingaben. Ohne angeschlossenen Monitor laeuft alles unveraendert nur ueber das Terminal -- die Monitor-Funktion bleibt dann automatisch inaktiv.
 
+## Kontakte-Status
+
+Alle 12 Relais (3 Ausgaenge + 9 Eingaenge) lassen sich live einsehen, jeweils AN/aus:
+
+- **Terminal:** Menuepunkt `k` -- aktualisiert sich automatisch jede Sekunde, mit beliebiger Taste zurueck zum Hauptmenue
+- **Monitor:** Button "Kontakte" auf der Hauptseite -- eigene Ansicht mit "Zurueck"-Button, aktualisiert sich ebenfalls automatisch
+
+Nuetzlich zur Fehlersuche, z.B. um zu pruefen, ob ein Kontakt schon zu frueh oder gar nicht schaltet.
+
 ## Redstone-Ausgaenge (Ansteuerung, unveraendert)
 
 | Signal | Relay |
