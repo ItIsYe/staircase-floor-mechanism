@@ -160,16 +160,19 @@ local relay_boden_x   = findRelay(cfg.redstone_relais.ausgaenge.boden_x)
 local relay_t1_y_ausgefahren = findRelay(cfg.redstone_relais.eingaenge.treppe1_y_ausgefahren)
 local relay_t1_y_eingefahren = findRelay(cfg.redstone_relais.eingaenge.treppe1_y_eingefahren)
 local relay_t1_z_unten       = findRelay(cfg.redstone_relais.eingaenge.treppe1_z_unten)
+local relay_t1_z_unten_bei_y_eingefahren = findRelay(cfg.redstone_relais.eingaenge.treppe1_z_unten_bei_y_eingefahren)
 
 -- Treppe1 "Treppe"-Zustand: Y ausgefahren allein (kein Z-oben-Kontakt vorhanden)
--- Treppe1 "Grundstellung"-Zustand (verschwunden): Y eingefahren allein.
--- WICHTIG: Der Z-unten-Kontakt (relay_t1_z_unten) ist NUR lesbar, waehrend
--- Y noch ausgefahren ist -- sobald Y einfaehrt, geht der Kontakt aus, auch
--- wenn Z physisch wirklich unten steht. Er taugt daher NICHT als dauerhafte
--- Bestaetigung, sondern wird nur waehrend der Z-Bewegung selbst (in
--- treppe1Einfahren(), Schritt 1, solange Y noch ausgefahren ist) geprueft.
+-- Treppe1 "Grundstellung"-Zustand (verschwunden), dauerhaft: Y eingefahren
+-- UND Z-unten-bei-Y-eingefahren zusammen (relay_t1_z_unten waere hier
+-- nicht lesbar, da er nur waehrend Y ausgefahren funktioniert -- siehe
+-- Kommentar oben).
 local relay_t1_treppe_bestaetigt = relay_t1_y_ausgefahren
-local relay_t1_grund_bestaetigt = relay_t1_y_eingefahren
+local relay_t1_grund_bestaetigt = {
+    getInput = function(side)
+        return relay_t1_y_eingefahren.getInput(side) and relay_t1_z_unten_bei_y_eingefahren.getInput(side)
+    end
+}
 
 -- Treppenmodul2: nur Y-Achse (beide Endpunkte, je ein eigener Kontakt)
 local relay_t2_y_ausgefahren = findRelay(cfg.redstone_relais.eingaenge.treppe2_y_ausgefahren)
@@ -673,6 +676,7 @@ local function kontaktListe()
         { name = "Treppe1 Y ausgefahren", relay = relay_t1_y_ausgefahren, istEingang = true },
         { name = "Treppe1 Y eingefahren", relay = relay_t1_y_eingefahren, istEingang = true },
         { name = "Treppe1 Z unten",       relay = relay_t1_z_unten,       istEingang = true },
+        { name = "Treppe1 Z unten (bei Y ein)", relay = relay_t1_z_unten_bei_y_eingefahren, istEingang = true },
         { name = "Treppe2 Y ausgefahren", relay = relay_t2_y_ausgefahren, istEingang = true },
         { name = "Treppe2 Y eingefahren", relay = relay_t2_y_eingefahren, istEingang = true },
         { name = "Boden X links",         relay = relay_b_x_links,        istEingang = true },
@@ -1076,6 +1080,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
