@@ -122,6 +122,17 @@ Erst nach dem letzten Schritt wird fuer alle Module per Relay-Kontakt die finale
 
 Distanzen fuer die nicht auto-kalibrierten Achsen sind in `config.lua` unter `distanzen.treppe1_z`/`boden_z`/`boden_a` einstellbar (auch live im Programm, Menuepunkte 8 und 7). Jede Achse hat zudem einen eigenen Richtungsmodifier unter `richtung`.
 
+## Externer Monitor mit Touch-Steuerung
+
+Wird ein (Advanced) Monitor per Modem am Computer angeschlossen erkannt, zeigt das Skript dort automatisch eine zweite Bedienoberflaeche mit Touch-Buttons:
+
+- **Status** (Treppe/Boden sichtbar, farblich unterschieden) und ob gerade eine Bewegung laeuft
+- **Automatik-Button:** togglet zwischen Treppe und Grundstellung (gleiche Verriegelung wie der Redstone-Trigger)
+- **Manuelle Buttons** fuer Treppe1, Treppe2 und Boden, je Aus- und Einfahren (gleiche lockere Verriegelung wie die Terminal-Menuepunkte 4/5/6 -- nur Busy-Check, kein Gesamtzustand noetig)
+- **Whitelist-Anzeige:** ob gerade ein berechtigter Spieler im Geofence-Bereich ist
+
+Der Monitor aktualisiert sich automatisch bei Zustandsaenderungen (auch wenn die Aenderung durch Redstone-Trigger oder Geofence im Hintergrund ausgeloest wurde), nicht nur bei eigenen Touch-Eingaben. Ohne angeschlossenen Monitor laeuft alles unveraendert nur ueber das Terminal -- die Monitor-Funktion bleibt dann automatisch inaktiv.
+
 ## Redstone-Ausgaenge (Ansteuerung, unveraendert)
 
 | Signal | Relay |
