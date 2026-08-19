@@ -14,7 +14,7 @@
 
 return {
 
-    config_version = 17,
+    config_version = 18,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -149,5 +149,12 @@ return {
         max_schritte = 32,
     },
 
+    -- Sicherheitspause NACH einer Kontakt-Bestaetigung, bevor der naechste
+    -- Schritt beginnt (in Sekunden). Manche Kontakte schalten kurz bevor
+    -- die Bewegung optisch/mechanisch wirklich ganz fertig ist -- diese
+    -- Pause faengt das ab. 0 = keine Pause.
+    sicherheitspause_sekunden = 0.5,
+
 }
+
 
