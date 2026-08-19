@@ -136,6 +136,15 @@ Wird ein (Advanced) Monitor per Modem am Computer angeschlossen erkannt, zeigt d
 
 Der Monitor aktualisiert sich automatisch bei Zustandsaenderungen (auch wenn die Aenderung durch Redstone-Trigger oder Geofence im Hintergrund ausgeloest wurde), nicht nur bei eigenen Touch-Eingaben. Ohne angeschlossenen Monitor laeuft alles unveraendert nur ueber das Terminal -- die Monitor-Funktion bleibt dann automatisch inaktiv.
 
+## Log-Datei
+
+Jede Status-, Bewegungs-, Abbruch- und Sperr-Meldung landet zusaetzlich mit Zeitstempel in `treppe_log.txt` -- nichts geht mehr durch Wegscrollen oder ein zu schnell verschwindendes Terminal verloren. Auch jede Aenderung eines Ausgangs-Relais (Treppe1-Z, Boden-X, Boden-Z: AN/aus) wird protokolliert.
+
+- **Terminal:** Menuepunkt `l` -- oeffnet die Datei im eingebauten Editor (Scrollen/Suchen) oder leert sie
+- Die Datei waechst automatisch bis 100 KB, danach wird die aeltere Haelfte automatisch verworfen (kein unbegrenztes Wachstum)
+
+Besonders nuetzlich bei Fehlern, die im Terminal live schwer zu erwischen sind (z.B. schnelle Bewegungsablaeufe) -- einfach danach `treppe_log.txt` durchsehen, um genau zu sehen, was wann passiert ist.
+
 ## Kontakte-Status
 
 Alle 12 Relais (3 Ausgaenge + 9 Eingaenge) lassen sich live einsehen, jeweils AN/aus:
@@ -192,6 +201,7 @@ Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das 
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+
 
 
 
