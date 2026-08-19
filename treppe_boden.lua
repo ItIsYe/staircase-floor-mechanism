@@ -598,8 +598,6 @@ end
 -- ============================================
 -- Monitor-UI (externer Advanced Monitor mit Touch)
 -- ============================================
--- Monitor-UI (externer Advanced Monitor mit Touch)
--- ============================================
 
 -- Liste aller Kontakte fuer die Diagnose-Anzeige (Terminal + Monitor)
 local function kontaktListe()
@@ -1013,4 +1011,5 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
