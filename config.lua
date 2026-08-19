@@ -14,7 +14,7 @@
 
 return {
 
-    config_version = 19,
+    config_version = 20,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -69,8 +69,8 @@ return {
         -- Ausgaenge (Ansteuerung der Bewegung) -- UNVERAENDERT
         ausgaenge = {
             treppe1_z = "redstone_relay_3",  -- Treppe1: Z-Achse braucht Signal, wenn Y-Achse aktiviert wird
-            boden_z   = "redstone_relay_5",  -- Boden: Z-Achse braucht X-Signal
-            boden_x   = "redstone_relay_4",  -- Boden: A-Achse braucht X- UND Z-Signal zusammen
+            boden_z   = "redstone_relay_4",  -- Boden: Z-Achse braucht X-Signal
+            boden_x   = "redstone_relay_5",  -- Boden: A-Achse braucht X- UND Z-Signal zusammen
         },
 
         -- Eingaenge (Positionskontakte) -- NEU DEFINIERT
@@ -157,6 +157,7 @@ return {
     sicherheitspause_sekunden = 0.5,
 
 }
+
 
 
 
