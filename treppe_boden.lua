@@ -520,7 +520,7 @@ local function zustandInitialisieren()
         zustand = "boden"
         print("Zustand erkannt: Boden sichtbar")
     else
-        print("Zustand nicht eindeutig -- fahre einmalig in Grundstellung (Treppe)")
+        print("Zustand nicht eindeutig -- Annahme: Grundstellung. Fahre einmalig zur Treppe.")
         zustand = "boden"
         relaisSetzen(relay_treppe1_z, false)
         relaisSetzen(relay_boden_z, false)
