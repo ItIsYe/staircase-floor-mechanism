@@ -353,15 +353,16 @@ end
 
 local function treppe1Y(gearshift, richtung, zielRelay, beschreibung)
     relaisSetzen(relay_treppe1_z, false)
-    fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe1 Y: " .. beschreibung)
+    return fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe1 Y: " .. beschreibung)
 end
 
 -- zielRelay optional: nur beim Einfahren (Richtung "unten") vorhanden,
 -- da "oben" keinen eigenen Kontakt hat -- dort bleibt es bei fester Distanz.
 local function treppe1Z(gearshift, richtung, zielRelay, beschreibung)
     relaisSetzen(relay_treppe1_z, true)
+    local erfolg = true
     if zielRelay then
-        fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe1 Z: " .. beschreibung)
+        erfolg = fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe1 Z: " .. beschreibung)
     else
         print("Treppe1 Z: " .. beschreibung .. " ...")
         gearshift.move(runtime.treppe1_z, richtung)
@@ -369,26 +370,31 @@ local function treppe1Z(gearshift, richtung, zielRelay, beschreibung)
         print("Treppe1 Z: " .. beschreibung .. " fertig.")
     end
     relaisSetzen(relay_treppe1_z, false)
+    return erfolg
 end
 
 -- Treppe1 ausfahren (Grundstellung -> Treppe sichtbar): Y zuerst, dann Z
 -- (Z darf erst ausfahren, wenn Y bereits ausgefahren ist)
 local function treppe1Ausfahren()
-    treppe1Y(treppe1_aus, RICHTUNG_T1_Y_AUS, relay_t1_y_ausgefahren, "faehrt aus")
-    treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch")  -- kein Kontakt fuer "oben"
+    if not treppe1Y(treppe1_aus, RICHTUNG_T1_Y_AUS, relay_t1_y_ausgefahren, "faehrt aus") then
+        return false
+    end
+    return treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch")  -- kein Kontakt fuer "oben"
 end
 
 -- Treppe1 einfahren (Treppe -> Grundstellung): Z zuerst, dann Y
 -- (Y darf erst fahren, wenn Z bereits unten ist)
 local function treppe1Einfahren()
-    treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter")
-    treppe1Y(treppe1_ein, RICHTUNG_T1_Y_EIN, relay_t1_y_eingefahren, "faehrt ein")
+    if not treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter") then
+        return false
+    end
+    return treppe1Y(treppe1_ein, RICHTUNG_T1_Y_EIN, relay_t1_y_eingefahren, "faehrt ein")
 end
 
 -- Treppe2 hat nur eine Achse (Y), beide Endpunkte haben einen Kontakt --
 -- Auto-Kalibrierung wie bei Treppe1-Y/Boden-X.
 local function treppe2Y(gearshift, richtung, zielRelay, beschreibung)
-    fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe2 Y: " .. beschreibung)
+    return fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe2 Y: " .. beschreibung)
 end
 
 -- Boden hat nur 2 Gearshifts (aus/ein), aber ALLE 3 Achsen (X, Z, A)
@@ -403,7 +409,7 @@ end
 local function bodenX(gearshift, richtung, zielRelay, beschreibung)
     relaisSetzen(relay_boden_z, false)
     relaisSetzen(relay_boden_x, false)
-    fahreBisKontakt(gearshift, richtung, zielRelay, "Boden X: " .. beschreibung)
+    return fahreBisKontakt(gearshift, richtung, zielRelay, "Boden X: " .. beschreibung)
 end
 
 local function bodenZ(gearshift, richtung, beschreibung)
@@ -413,6 +419,10 @@ local function bodenZ(gearshift, richtung, beschreibung)
     wartenBisFertig(gearshift)
     relaisSetzen(relay_boden_x, false)
     print("Boden Z: " .. beschreibung .. " fertig.")
+    if runtime.sicherheitspause > 0 then
+        sleep(runtime.sicherheitspause)
+    end
+    return true
 end
 
 local function bodenA(gearshift, richtung, beschreibung)
@@ -424,22 +434,27 @@ local function bodenA(gearshift, richtung, beschreibung)
     relaisSetzen(relay_boden_x, false)
     relaisSetzen(relay_boden_z, false)
     print("Boden A: " .. beschreibung .. " fertig.")
+    if runtime.sicherheitspause > 0 then
+        sleep(runtime.sicherheitspause)
+    end
+    return true
 end
 
 -- Kompletter Boden-Ablauf einfahren: Z -> X -> A (Reihenfolge bestaetigt)
+-- Bricht sofort ab (false), wenn ein Teilschritt fehlschlaegt.
 local function bodenEinfahren()
-    bodenZ(boden_ein, RICHTUNG_B_Z_EIN, "faehrt runter")
-    bodenX(boden_ein, RICHTUNG_B_X_EIN, relay_b_x_links, "faehrt nach links")
-    bodenA(boden_ein, RICHTUNG_B_A_EIN, "dreht auf 90 Grad")
-    warteAufRelay(relay_boden_eingefahren_bestaetigt, true)
+    if not bodenZ(boden_ein, RICHTUNG_B_Z_EIN, "faehrt runter") then return false end
+    if not bodenX(boden_ein, RICHTUNG_B_X_EIN, relay_b_x_links, "faehrt nach links") then return false end
+    if not bodenA(boden_ein, RICHTUNG_B_A_EIN, "dreht auf 90 Grad") then return false end
+    return warteAufRelay(relay_boden_eingefahren_bestaetigt, true)
 end
 
 -- Kompletter Boden-Ablauf ausfahren: A -> X -> Z (umgekehrte Reihenfolge)
 local function bodenAusfahren()
-    bodenA(boden_aus, RICHTUNG_B_A_AUS, "dreht auf 0 Grad")
-    bodenX(boden_aus, RICHTUNG_B_X_AUS, relay_b_x_rechts, "faehrt nach rechts")
-    bodenZ(boden_aus, RICHTUNG_B_Z_AUS, "faehrt hoch")
-    warteAufRelay(relay_boden_ausgefahren_bestaetigt, true)
+    if not bodenA(boden_aus, RICHTUNG_B_A_AUS, "dreht auf 0 Grad") then return false end
+    if not bodenX(boden_aus, RICHTUNG_B_X_AUS, relay_b_x_rechts, "faehrt nach rechts") then return false end
+    if not bodenZ(boden_aus, RICHTUNG_B_Z_AUS, "faehrt hoch") then return false end
+    return warteAufRelay(relay_boden_ausgefahren_bestaetigt, true)
 end
 
 -- ============================================
@@ -451,31 +466,52 @@ local function treppeVerschwinden()
     print("=== Ablauf: Treppe -> Grundstellung ===")
 
     -- Schritt 1: Treppe1 Z faehrt runter
-    treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter")
+    if not treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter") then
+        print("ABBRUCH: Treppe1 Z (Schritt 1) fehlgeschlagen.")
+        return false
+    end
 
     -- Schritt 2: Treppe1 Y und Treppe2 Y GLEICHZEITIG
+    local t1yOk, t2yOk = false, false
     parallel.waitForAll(
-        function() treppe1Y(treppe1_ein, RICHTUNG_T1_Y_EIN, relay_t1_y_eingefahren, "faehrt ein") end,
-        function() treppe2Y(treppe2_ein, RICHTUNG_T2_EIN, relay_t2_y_eingefahren, "faehrt ein") end
+        function() t1yOk = treppe1Y(treppe1_ein, RICHTUNG_T1_Y_EIN, relay_t1_y_eingefahren, "faehrt ein") end,
+        function() t2yOk = treppe2Y(treppe2_ein, RICHTUNG_T2_EIN, relay_t2_y_eingefahren, "faehrt ein") end
     )
+    if not t1yOk or not t2yOk then
+        print("ABBRUCH: Treppe1/Treppe2 Y (Schritt 2) fehlgeschlagen.")
+        return false
+    end
 
     -- Schritt 3: Boden Drehung
-    bodenA(boden_aus, RICHTUNG_B_A_AUS, "dreht auf 0 Grad")
+    if not bodenA(boden_aus, RICHTUNG_B_A_AUS, "dreht auf 0 Grad") then
+        print("ABBRUCH: Boden A (Schritt 3) fehlgeschlagen.")
+        return false
+    end
 
     -- Schritt 4: Boden X
-    bodenX(boden_aus, RICHTUNG_B_X_AUS, relay_b_x_rechts, "faehrt nach rechts")
+    if not bodenX(boden_aus, RICHTUNG_B_X_AUS, relay_b_x_rechts, "faehrt nach rechts") then
+        print("ABBRUCH: Boden X (Schritt 4) fehlgeschlagen.")
+        return false
+    end
 
     -- Schritt 5: Boden Z
-    bodenZ(boden_aus, RICHTUNG_B_Z_AUS, "faehrt hoch")
+    if not bodenZ(boden_aus, RICHTUNG_B_Z_AUS, "faehrt hoch") then
+        print("ABBRUCH: Boden Z (Schritt 5) fehlgeschlagen.")
+        return false
+    end
 
-    warteAufRelay(relay_t1_grund_bestaetigt, true)
-    warteAufRelay(relay_t2_y_eingefahren, true)
-    warteAufRelay(relay_boden_ausgefahren_bestaetigt, true)
+    if not warteAufRelay(relay_t1_grund_bestaetigt, true)
+        or not warteAufRelay(relay_t2_y_eingefahren, true)
+        or not warteAufRelay(relay_boden_ausgefahren_bestaetigt, true) then
+        print("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
+        return false
+    end
     print("Alle Module bestaetigt.")
 
     zustand = "boden"
     print("=== Ablauf fertig: Grundstellung (Boden sichtbar) ===")
     print("")
+    return true
 end
 
 local function treppeHerstellen()
@@ -483,51 +519,77 @@ local function treppeHerstellen()
     print("=== Ablauf: Grundstellung -> Treppe ===")
 
     -- Schritt 1: Boden Z faehrt runter
-    bodenZ(boden_ein, RICHTUNG_B_Z_EIN, "faehrt runter")
+    if not bodenZ(boden_ein, RICHTUNG_B_Z_EIN, "faehrt runter") then
+        print("ABBRUCH: Boden Z (Schritt 1) fehlgeschlagen.")
+        return false
+    end
 
     -- Schritt 2: Boden X
-    bodenX(boden_ein, RICHTUNG_B_X_EIN, relay_b_x_links, "faehrt nach links")
+    if not bodenX(boden_ein, RICHTUNG_B_X_EIN, relay_b_x_links, "faehrt nach links") then
+        print("ABBRUCH: Boden X (Schritt 2) fehlgeschlagen.")
+        return false
+    end
 
     -- Schritt 3: Boden Drehung, Treppe1 Y und Treppe2 Y GLEICHZEITIG
+    local aOk, t1yOk, t2yOk = false, false, false
     parallel.waitForAll(
-        function() bodenA(boden_ein, RICHTUNG_B_A_EIN, "dreht auf 90 Grad") end,
-        function() treppe1Y(treppe1_aus, RICHTUNG_T1_Y_AUS, relay_t1_y_ausgefahren, "faehrt aus") end,
-        function() treppe2Y(treppe2_aus, RICHTUNG_T2_AUS, relay_t2_y_ausgefahren, "faehrt aus") end
+        function() aOk = bodenA(boden_ein, RICHTUNG_B_A_EIN, "dreht auf 90 Grad") end,
+        function() t1yOk = treppe1Y(treppe1_aus, RICHTUNG_T1_Y_AUS, relay_t1_y_ausgefahren, "faehrt aus") end,
+        function() t2yOk = treppe2Y(treppe2_aus, RICHTUNG_T2_AUS, relay_t2_y_ausgefahren, "faehrt aus") end
     )
+    if not aOk or not t1yOk or not t2yOk then
+        print("ABBRUCH: Boden A / Treppe1 Y / Treppe2 Y (Schritt 3) fehlgeschlagen.")
+        return false
+    end
 
     -- Schritt 4: Treppe1 Z faehrt hoch
-    treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch")
+    if not treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch") then
+        print("ABBRUCH: Treppe1 Z (Schritt 4) fehlgeschlagen.")
+        return false
+    end
 
-    warteAufRelay(relay_t1_treppe_bestaetigt, true)
-    warteAufRelay(relay_t2_y_ausgefahren, true)
-    warteAufRelay(relay_boden_eingefahren_bestaetigt, true)
+    if not warteAufRelay(relay_t1_treppe_bestaetigt, true)
+        or not warteAufRelay(relay_t2_y_ausgefahren, true)
+        or not warteAufRelay(relay_boden_eingefahren_bestaetigt, true) then
+        print("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
+        return false
+    end
     print("Alle Module bestaetigt.")
 
     zustand = "treppe"
     print("=== Ablauf fertig: Treppe sichtbar ===")
     print("")
+    return true
 end
 
 local function ausloesen()
     if not verriegelungAnfordern() then return false end
+    local erfolg
     if zustand == "treppe" then
-        treppeVerschwinden()
+        erfolg = treppeVerschwinden()
     else
-        treppeHerstellen()
+        erfolg = treppeHerstellen()
     end
     verriegelungFreigeben()
+    if not erfolg then
+        print("Ablauf wurde abgebrochen -- Zustand NICHT gewechselt, System pruefen (z.B. Menuepunkt k).")
+    end
     return true
 end
 
 local function zielzustandErzwingen(ziel)
     if zustand == ziel then return end
     if not verriegelungAnfordern() then return end
+    local erfolg
     if ziel == "treppe" then
-        treppeHerstellen()
+        erfolg = treppeHerstellen()
     else
-        treppeVerschwinden()
+        erfolg = treppeVerschwinden()
     end
     verriegelungFreigeben()
+    if not erfolg then
+        print("Geofence-Ablauf wurde abgebrochen -- Zustand NICHT gewechselt, System pruefen (z.B. Menuepunkt k).")
+    end
 end
 
 -- ============================================
@@ -552,7 +614,9 @@ local function zustandInitialisieren()
         relaisSetzen(relay_treppe1_z, false)
         relaisSetzen(relay_boden_z, false)
         relaisSetzen(relay_boden_x, false)
-        treppeHerstellen()
+        if not treppeHerstellen() then
+            print("WARNUNG: Initialisierungs-Ablauf fehlgeschlagen. Bitte Kontakte pruefen (Menuepunkt k) und Zustand manuell klaeren.")
+        end
     end
 end
 
@@ -1011,5 +1075,6 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
