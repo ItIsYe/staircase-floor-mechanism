@@ -10,11 +10,27 @@
 -- Alle Einstellungen kommen aus config.lua -- diese Datei nicht bearbeiten,
 -- stattdessen config.lua anpassen.
 --
--- Achsen: Z = rauf/runter, X = vor/zurueck
--- Grundposition (Treppe sichtbar):
---   Treppenmodul1: oben (Z eingefahren), am Ende des Gantrys (X ausgefahren)
---   Treppenmodul2: X komplett ausgefahren, am Ende des Gantrys
---   Boden: um 90 Grad gedreht, alles eingefahren
+-- Achsen: Z = hoch/runter, X = links/rechts, Y = vor/zurueck, A = Drehachse
+--
+-- Grundstellung (Boden sichtbar, Treppe NICHT sichtbar):
+--   Treppenmodul1: Y eingefahren, Z unten
+--   Treppenmodul2: Y eingefahren
+--   Boden: X rechts (ausgefahren), Z oben, A 0 Grad
+--
+-- Treppe sichtbar (Boden eingefahren, nicht sichtbar):
+--   Treppenmodul1: Y ausgefahren, Z oben
+--   Treppenmodul2: Y ausgefahren
+--   Boden: X links (eingefahren), Z unten, A 90 Grad
+--
+-- Treppenmodul1 (Y+Z) und Boden (X+Z+A) laufen jeweils ueber EINEN
+-- Gearshift pro Richtung -- Redstone-Ausgangs-Relais waehlen aus, welche
+-- Achse gerade angetrieben wird (siehe Funktionen treppe1Y/treppe1Z/
+-- bodenX/bodenZ/bodenA weiter unten). Treppenmodul2 hat nur eine Achse.
+--
+-- Reihenfolge Grundstellung -> Treppe: Boden-Z -> Boden-X ->
+--   [Boden-A + Treppe1-Y + Treppe2-Y gleichzeitig] -> Treppe1-Z
+-- Reihenfolge Treppe -> Grundstellung: Treppe1-Z ->
+--   [Treppe1-Y + Treppe2-Y gleichzeitig] -> Boden-A -> Boden-X -> Boden-Z
 -- ============================================
 
 if not fs.exists("config.lua") then
@@ -579,10 +595,10 @@ local function zeichneUI()
     print("Status: " .. zustand)
     print("")
     print("-- Distanzen (Blocke) --")
-    print("1) Treppe1 Y: auto-kalibriert")
+    print("   Treppe1 Y: auto-kalibriert")
     print("8) Treppe1 Z (ausfahren): " .. runtime.treppe1_z)
-    print("2) Treppe2: auto-kalibriert")
-    print("3) Boden X: auto-kalibriert")
+    print("   Treppe2: auto-kalibriert")
+    print("   Boden X: auto-kalibriert")
     print("7) Boden Z: " .. runtime.boden_z)
     print("")
     print("-- Auto-Kalibrierung --")
@@ -764,3 +780,4 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung)
+
