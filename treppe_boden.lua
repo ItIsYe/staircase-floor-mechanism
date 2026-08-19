@@ -40,6 +40,35 @@ local cfg = dofile("config.lua")
 
 local RUNTIME_FILE = "treppe_runtime.cfg"
 
+-- ============================================
+-- Logger: schreibt jede Statusmeldung zusaetzlich mit Zeitstempel in
+-- eine Datei, damit nichts mehr wegscrollt oder verpasst wird.
+-- ============================================
+local LOG_FILE = "treppe_log.txt"
+local LOG_MAX_BYTES = 100000  -- ab dieser Groesse wird die aeltere Haelfte verworfen
+
+local function log(text)
+    print(text)
+    local ok, fehler = pcall(function()
+        if fs.exists(LOG_FILE) and fs.getSize(LOG_FILE) > LOG_MAX_BYTES then
+            local f = fs.open(LOG_FILE, "r")
+            local inhalt = f.readAll()
+            f.close()
+            local halbe = inhalt:sub(math.floor(#inhalt / 2))
+            local neustart = halbe:find("\n")
+            local f2 = fs.open(LOG_FILE, "w")
+            f2.write("[... aeltere Eintraege verworfen ...]\n")
+            if neustart then
+                f2.write(halbe:sub(neustart + 1))
+            end
+            f2.close()
+        end
+        local f = fs.open(LOG_FILE, "a")
+        f.writeLine(os.date("%Y-%m-%d %H:%M:%S") .. "  " .. text)
+        f.close()
+    end)
+end
+
 local runtime = {
     treppe1_z = cfg.distanzen.treppe1_z,  -- nur Richtung "ausfahren", "einfahren" ist auto-kalibriert
     boden_z = cfg.distanzen.boden_z,
@@ -235,9 +264,12 @@ local function relaisAn(inputRelay)
     return false
 end
 
-local function relaisSetzen(outputRelay, an)
+local function relaisSetzen(outputRelay, an, label)
     for _, seite in ipairs(ALLE_SEITEN) do
         outputRelay.setOutput(seite, an)
+    end
+    if label then
+        log("Relay-Signal " .. label .. ": " .. (an and "AN" or "aus"))
     end
 end
 
@@ -330,7 +362,7 @@ end
 -- eigenen (auch kombinierten) Kontakt haben. Sicherheitsabbruch nach
 -- runtime.auto_max_schritte Schritten, falls der Kontakt nie schaltet.
 local function fahreBisKontakt(gearshift, richtung, zielRelay, beschreibung)
-    print(beschreibung .. " (Auto bis Kontakt) ...")
+    log(beschreibung .. " (Auto bis Kontakt) ...")
     local schritte = 0
     while not relaisAn(zielRelay) and schritte < runtime.auto_max_schritte do
         gearshift.move(runtime.auto_schrittgroesse, richtung)
@@ -338,13 +370,13 @@ local function fahreBisKontakt(gearshift, richtung, zielRelay, beschreibung)
         schritte = schritte + 1
     end
     if relaisAn(zielRelay) then
-        print(beschreibung .. ": Kontakt erreicht nach " .. schritte .. " Schritten.")
+        log(beschreibung .. ": Kontakt erreicht nach " .. schritte .. " Schritten.")
         if runtime.sicherheitspause > 0 then
             sleep(runtime.sicherheitspause)
         end
         return true
     else
-        print("WARNUNG: " .. beschreibung .. " -- Kontakt nicht erreicht nach " .. runtime.auto_max_schritte .. " Schritten (Sicherheitsabbruch)")
+        log("WARNUNG: " .. beschreibung .. " -- Kontakt nicht erreicht nach " .. runtime.auto_max_schritte .. " Schritten (Sicherheitsabbruch)")
         return false
     end
 end
@@ -356,24 +388,24 @@ end
 -- Deshalb als 2 separate, nacheinander ausgefuehrte Schritte.
 
 local function treppe1Y(gearshift, richtung, zielRelay, beschreibung)
-    relaisSetzen(relay_treppe1_z, false)
+    relaisSetzen(relay_treppe1_z, false, "Treppe1-Z")
     return fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe1 Y: " .. beschreibung)
 end
 
 -- zielRelay optional: nur beim Einfahren (Richtung "unten") vorhanden,
 -- da "oben" keinen eigenen Kontakt hat -- dort bleibt es bei fester Distanz.
 local function treppe1Z(gearshift, richtung, zielRelay, beschreibung)
-    relaisSetzen(relay_treppe1_z, true)
+    relaisSetzen(relay_treppe1_z, true, "Treppe1-Z")
     local erfolg = true
     if zielRelay then
         erfolg = fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe1 Z: " .. beschreibung)
     else
-        print("Treppe1 Z: " .. beschreibung .. " ...")
+        log("Treppe1 Z: " .. beschreibung .. " ...")
         gearshift.move(runtime.treppe1_z, richtung)
         wartenBisFertig(gearshift)
-        print("Treppe1 Z: " .. beschreibung .. " fertig.")
+        log("Treppe1 Z: " .. beschreibung .. " fertig.")
     end
-    relaisSetzen(relay_treppe1_z, false)
+    relaisSetzen(relay_treppe1_z, false, "Treppe1-Z")
     return erfolg
 end
 
@@ -411,18 +443,18 @@ end
 -- Schritte gesteuert werden.
 
 local function bodenX(gearshift, richtung, zielRelay, beschreibung)
-    relaisSetzen(relay_boden_z, false)
-    relaisSetzen(relay_boden_x, false)
+    relaisSetzen(relay_boden_z, false, "Boden-Z")
+    relaisSetzen(relay_boden_x, false, "Boden-X")
     return fahreBisKontakt(gearshift, richtung, zielRelay, "Boden X: " .. beschreibung)
 end
 
 local function bodenZ(gearshift, richtung, beschreibung)
-    print("Boden Z: " .. beschreibung .. " ...")
-    relaisSetzen(relay_boden_x, true)
+    log("Boden Z: " .. beschreibung .. " ...")
+    relaisSetzen(relay_boden_x, true, "Boden-X")
     gearshift.move(runtime.boden_z, richtung)
     wartenBisFertig(gearshift)
-    relaisSetzen(relay_boden_x, false)
-    print("Boden Z: " .. beschreibung .. " fertig.")
+    relaisSetzen(relay_boden_x, false, "Boden-X")
+    log("Boden Z: " .. beschreibung .. " fertig.")
     if runtime.sicherheitspause > 0 then
         sleep(runtime.sicherheitspause)
     end
@@ -430,14 +462,14 @@ local function bodenZ(gearshift, richtung, beschreibung)
 end
 
 local function bodenA(gearshift, richtung, beschreibung)
-    print("Boden A: " .. beschreibung .. " ...")
-    relaisSetzen(relay_boden_x, true)
-    relaisSetzen(relay_boden_z, true)
+    log("Boden A: " .. beschreibung .. " ...")
+    relaisSetzen(relay_boden_x, true, "Boden-X")
+    relaisSetzen(relay_boden_z, true, "Boden-Z")
     gearshift.rotate(runtime.boden_a, richtung)
     wartenBisFertig(gearshift)
-    relaisSetzen(relay_boden_x, false)
-    relaisSetzen(relay_boden_z, false)
-    print("Boden A: " .. beschreibung .. " fertig.")
+    relaisSetzen(relay_boden_x, false, "Boden-X")
+    relaisSetzen(relay_boden_z, false, "Boden-Z")
+    log("Boden A: " .. beschreibung .. " fertig.")
     if runtime.sicherheitspause > 0 then
         sleep(runtime.sicherheitspause)
     end
@@ -466,12 +498,12 @@ end
 -- ============================================
 
 local function treppeVerschwinden()
-    print("")
-    print("=== Ablauf: Treppe -> Grundstellung ===")
+    log("")
+    log("=== Ablauf: Treppe -> Grundstellung ===")
 
     -- Schritt 1: Treppe1 Z faehrt runter
     if not treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter") then
-        print("ABBRUCH: Treppe1 Z (Schritt 1) fehlgeschlagen.")
+        log("ABBRUCH: Treppe1 Z (Schritt 1) fehlgeschlagen.")
         return false
     end
 
@@ -482,55 +514,55 @@ local function treppeVerschwinden()
         function() t2yOk = treppe2Y(treppe2_ein, RICHTUNG_T2_EIN, relay_t2_y_eingefahren, "faehrt ein") end
     )
     if not t1yOk or not t2yOk then
-        print("ABBRUCH: Treppe1/Treppe2 Y (Schritt 2) fehlgeschlagen.")
+        log("ABBRUCH: Treppe1/Treppe2 Y (Schritt 2) fehlgeschlagen.")
         return false
     end
 
     -- Schritt 3: Boden Drehung
     if not bodenA(boden_aus, RICHTUNG_B_A_AUS, "dreht auf 0 Grad") then
-        print("ABBRUCH: Boden A (Schritt 3) fehlgeschlagen.")
+        log("ABBRUCH: Boden A (Schritt 3) fehlgeschlagen.")
         return false
     end
 
     -- Schritt 4: Boden X
     if not bodenX(boden_aus, RICHTUNG_B_X_AUS, relay_b_x_rechts, "faehrt nach rechts") then
-        print("ABBRUCH: Boden X (Schritt 4) fehlgeschlagen.")
+        log("ABBRUCH: Boden X (Schritt 4) fehlgeschlagen.")
         return false
     end
 
     -- Schritt 5: Boden Z
     if not bodenZ(boden_aus, RICHTUNG_B_Z_AUS, "faehrt hoch") then
-        print("ABBRUCH: Boden Z (Schritt 5) fehlgeschlagen.")
+        log("ABBRUCH: Boden Z (Schritt 5) fehlgeschlagen.")
         return false
     end
 
     if not warteAufRelay(relay_t1_grund_bestaetigt, true)
         or not warteAufRelay(relay_t2_y_eingefahren, true)
         or not warteAufRelay(relay_boden_ausgefahren_bestaetigt, true) then
-        print("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
+        log("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
         return false
     end
-    print("Alle Module bestaetigt.")
+    log("Alle Module bestaetigt.")
 
     zustand = "boden"
-    print("=== Ablauf fertig: Grundstellung (Boden sichtbar) ===")
-    print("")
+    log("=== Ablauf fertig: Grundstellung (Boden sichtbar) ===")
+    log("")
     return true
 end
 
 local function treppeHerstellen()
-    print("")
-    print("=== Ablauf: Grundstellung -> Treppe ===")
+    log("")
+    log("=== Ablauf: Grundstellung -> Treppe ===")
 
     -- Schritt 1: Boden Z faehrt runter
     if not bodenZ(boden_ein, RICHTUNG_B_Z_EIN, "faehrt runter") then
-        print("ABBRUCH: Boden Z (Schritt 1) fehlgeschlagen.")
+        log("ABBRUCH: Boden Z (Schritt 1) fehlgeschlagen.")
         return false
     end
 
     -- Schritt 2: Boden X
     if not bodenX(boden_ein, RICHTUNG_B_X_EIN, relay_b_x_links, "faehrt nach links") then
-        print("ABBRUCH: Boden X (Schritt 2) fehlgeschlagen.")
+        log("ABBRUCH: Boden X (Schritt 2) fehlgeschlagen.")
         return false
     end
 
@@ -542,27 +574,27 @@ local function treppeHerstellen()
         function() t2yOk = treppe2Y(treppe2_aus, RICHTUNG_T2_AUS, relay_t2_y_ausgefahren, "faehrt aus") end
     )
     if not aOk or not t1yOk or not t2yOk then
-        print("ABBRUCH: Boden A / Treppe1 Y / Treppe2 Y (Schritt 3) fehlgeschlagen.")
+        log("ABBRUCH: Boden A / Treppe1 Y / Treppe2 Y (Schritt 3) fehlgeschlagen.")
         return false
     end
 
     -- Schritt 4: Treppe1 Z faehrt hoch
     if not treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch") then
-        print("ABBRUCH: Treppe1 Z (Schritt 4) fehlgeschlagen.")
+        log("ABBRUCH: Treppe1 Z (Schritt 4) fehlgeschlagen.")
         return false
     end
 
     if not warteAufRelay(relay_t1_treppe_bestaetigt, true)
         or not warteAufRelay(relay_t2_y_ausgefahren, true)
         or not warteAufRelay(relay_boden_eingefahren_bestaetigt, true) then
-        print("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
+        log("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
         return false
     end
-    print("Alle Module bestaetigt.")
+    log("Alle Module bestaetigt.")
 
     zustand = "treppe"
-    print("=== Ablauf fertig: Treppe sichtbar ===")
-    print("")
+    log("=== Ablauf fertig: Treppe sichtbar ===")
+    log("")
     return true
 end
 
@@ -576,7 +608,7 @@ local function ausloesen()
     end
     verriegelungFreigeben()
     if not erfolg then
-        print("Ablauf wurde abgebrochen -- Zustand NICHT gewechselt, System pruefen (z.B. Menuepunkt k).")
+        log("Ablauf wurde abgebrochen -- Zustand NICHT gewechselt, System pruefen (z.B. Menuepunkt k).")
     end
     return true
 end
@@ -592,7 +624,7 @@ local function zielzustandErzwingen(ziel)
     end
     verriegelungFreigeben()
     if not erfolg then
-        print("Geofence-Ablauf wurde abgebrochen -- Zustand NICHT gewechselt, System pruefen (z.B. Menuepunkt k).")
+        log("Geofence-Ablauf wurde abgebrochen -- Zustand NICHT gewechselt, System pruefen (z.B. Menuepunkt k).")
     end
 end
 
@@ -601,25 +633,25 @@ end
 -- ============================================
 
 local function zustandInitialisieren()
-    print("Initialisiere Zustand ueber Relais-Kontakte ...")
+    log("Initialisiere Zustand ueber Relais-Kontakte ...")
 
     local treppeErkannt = relaisAn(relay_t1_treppe_bestaetigt) and relaisAn(relay_t2_y_ausgefahren) and relaisAn(relay_boden_eingefahren_bestaetigt)
     local bodenErkannt  = relaisAn(relay_t1_grund_bestaetigt) and relaisAn(relay_t2_y_eingefahren) and relaisAn(relay_boden_ausgefahren_bestaetigt)
 
     if treppeErkannt and not bodenErkannt then
         zustand = "treppe"
-        print("Zustand erkannt: Treppe sichtbar")
+        log("Zustand erkannt: Treppe sichtbar")
     elseif bodenErkannt and not treppeErkannt then
         zustand = "boden"
-        print("Zustand erkannt: Boden sichtbar")
+        log("Zustand erkannt: Boden sichtbar")
     else
-        print("Zustand nicht eindeutig -- Annahme: Grundstellung. Fahre einmalig zur Treppe.")
+        log("Zustand nicht eindeutig -- Annahme: Grundstellung. Fahre einmalig zur Treppe.")
         zustand = "boden"
-        relaisSetzen(relay_treppe1_z, false)
-        relaisSetzen(relay_boden_z, false)
-        relaisSetzen(relay_boden_x, false)
+        relaisSetzen(relay_treppe1_z, false, "Treppe1-Z")
+        relaisSetzen(relay_boden_z, false, "Boden-Z")
+        relaisSetzen(relay_boden_x, false, "Boden-X")
         if not treppeHerstellen() then
-            print("WARNUNG: Initialisierungs-Ablauf fehlgeschlagen. Bitte Kontakte pruefen (Menuepunkt k) und Zustand manuell klaeren.")
+            log("WARNUNG: Initialisierungs-Ablauf fehlgeschlagen. Bitte Kontakte pruefen (Menuepunkt k) und Zustand manuell klaeren.")
         end
     end
 end
@@ -796,13 +828,13 @@ local function monitorAktionAusfuehren(aktion)
 
     if aktion == "automatik" then
         if not ausloesen() then
-            print("Monitor: Automatik gesperrt (System nicht in Endlage oder Bewegung laeuft)")
+            log("Monitor: Automatik gesperrt (System nicht in Endlage oder Bewegung laeuft)")
         end
         return
     end
 
     if not verriegelungAnfordernManuell() then
-        print("Monitor: Aktion '" .. aktion .. "' gesperrt (Bewegung laeuft bereits)")
+        log("Monitor: Aktion '" .. aktion .. "' gesperrt (Bewegung laeuft bereits)")
         return
     end
 
@@ -873,6 +905,7 @@ local function zeichneUI()
     print("-- Geschwindigkeiten (RPM) --")
     print("g) Geschwindigkeiten anzeigen/aendern")
     print("k) Kontakte-Status anzeigen")
+    print("l) Log anzeigen/loeschen")
     print("")
     print("-- Manuelle Fahrt --")
     print("4) Treppe1 manuell")
@@ -902,6 +935,40 @@ local function rpmEingabe(prompt, alt)
         return n
     end
     return alt
+end
+
+-- Zeigt den Inhalt der Log-Datei mit "edit"-Aehnlichem Scrollen (nutzt
+-- die eingebaute "edit"-App, da sie Scrollen und Suchen mitbringt).
+-- Bietet zusaetzlich die Option, das Log zu leeren.
+local function logAnzeigen()
+    term.clear()
+    term.setCursorPos(1, 1)
+    if not fs.exists(LOG_FILE) then
+        print("Noch keine Log-Datei vorhanden (" .. LOG_FILE .. ").")
+        print("Beliebige Taste = zurueck")
+        os.pullEvent("key")
+        return
+    end
+
+    print("=== Log (" .. LOG_FILE .. ") ===")
+    print("")
+    print("e = im Editor oeffnen (Scrollen/Suchen), l = leeren, 0 = zurueck")
+    write("> ")
+    local eingabe = read()
+
+    if eingabe == "e" then
+        shell.run("edit", LOG_FILE)
+    elseif eingabe == "l" then
+        print("Wirklich loeschen? (j/n)")
+        write("> ")
+        if read() == "j" then
+            local f = fs.open(LOG_FILE, "w")
+            f.write("")
+            f.close()
+            print("Log geleert.")
+            sleep(1)
+        end
+    end
 end
 
 -- Zeigt die Kontakte live an, aktualisiert jede Sekunde, bis eine Taste
@@ -984,7 +1051,7 @@ end
 local function treppe1Manuell()
     print("")
     if not verriegelungAnfordernManuell() then
-        print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+        log("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
         print("Weiter mit beliebiger Taste ...")
         read()
         return
@@ -1000,7 +1067,7 @@ end
 local function treppe2Manuell()
     print("")
     if not verriegelungAnfordernManuell() then
-        print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+        log("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
         print("Weiter mit beliebiger Taste ...")
         read()
         return
@@ -1016,7 +1083,7 @@ end
 local function bodenManuell()
     print("")
     if not verriegelungAnfordernManuell() then
-        print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+        log("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
         print("Weiter mit beliebiger Taste ...")
         read()
         return
@@ -1052,6 +1119,9 @@ local function uiSchleife()
         elseif auswahl == "k" then
             kontakteAnzeigen()
 
+        elseif auswahl == "l" then
+            logAnzeigen()
+
         elseif auswahl == "4" then treppe1Manuell()
         elseif auswahl == "5" then treppe2Manuell()
         elseif auswahl == "6" then bodenManuell()
@@ -1059,7 +1129,7 @@ local function uiSchleife()
         elseif auswahl == "9" then
             if not ausloesen() then
                 print("")
-                print("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
+                log("Gesperrt: System nicht in Endlage oder Bewegung laeuft bereits")
                 print("Weiter mit beliebiger Taste ...")
                 read()
             end
@@ -1080,6 +1150,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
