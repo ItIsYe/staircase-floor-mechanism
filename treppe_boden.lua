@@ -47,6 +47,7 @@ local runtime = {
 
     auto_schrittgroesse = cfg.auto_kalibrierung.schrittgroesse,
     auto_max_schritte   = cfg.auto_kalibrierung.max_schritte,
+    sicherheitspause    = cfg.sicherheitspause_sekunden,
 
     rpm_treppe1            = cfg.geschwindigkeiten.rpm.treppe1,
     rpm_treppe2_ausfahren   = cfg.geschwindigkeiten.rpm.treppe2_ausfahren,
@@ -297,6 +298,9 @@ local function warteAufRelay(inputRelay, zielZustand)
         end
         sleep(0.25)
     end
+    if zielZustand and runtime.sicherheitspause > 0 then
+        sleep(runtime.sicherheitspause)
+    end
     return true
 end
 
@@ -327,6 +331,9 @@ local function fahreBisKontakt(gearshift, richtung, zielRelay, beschreibung)
     end
     if relaisAn(zielRelay) then
         print(beschreibung .. ": Kontakt erreicht nach " .. schritte .. " Schritten.")
+        if runtime.sicherheitspause > 0 then
+            sleep(runtime.sicherheitspause)
+        end
         return true
     else
         print("WARNUNG: " .. beschreibung .. " -- Kontakt nicht erreicht nach " .. runtime.auto_max_schritte .. " Schritten (Sicherheitsabbruch)")
@@ -602,7 +609,7 @@ local function zeichneUI()
     print("7) Boden Z: " .. runtime.boden_z)
     print("")
     print("-- Auto-Kalibrierung --")
-    print("a) Schrittgroesse: " .. runtime.auto_schrittgroesse .. "  Max. Schritte: " .. runtime.auto_max_schritte)
+    print("a) Schrittgroesse: " .. runtime.auto_schrittgroesse .. "  Max. Schritte: " .. runtime.auto_max_schritte .. "  Sicherheitspause: " .. runtime.sicherheitspause .. "s")
     print("")
     print("-- Geschwindigkeiten (RPM) --")
     print("g) Geschwindigkeiten anzeigen/aendern")
@@ -747,6 +754,7 @@ local function uiSchleife()
         elseif auswahl == "a" then
             runtime.auto_schrittgroesse = zahlEingabe("Auto-Schrittgroesse", runtime.auto_schrittgroesse)
             runtime.auto_max_schritte = zahlEingabe("Auto max. Schritte", runtime.auto_max_schritte)
+            runtime.sicherheitspause = zahlEingabe("Sicherheitspause (Sekunden)", runtime.sicherheitspause)
             speichereRuntime()
 
         elseif auswahl == "g" then
