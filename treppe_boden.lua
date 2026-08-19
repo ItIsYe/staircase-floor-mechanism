@@ -198,6 +198,10 @@ local relay_boden_eingefahren_bestaetigt = {
 }
 
 local playerDetector = peripheral.find("playerDetector")
+local monitor = peripheral.find("monitor")
+if monitor then
+    monitor.setTextScale(0.5)
+end
 
 local RS_TRIGGER_SIDE = cfg.redstone_trigger.seite
 
@@ -592,6 +596,142 @@ local function redstoneTriggerUeberwachung()
 end
 
 -- ============================================
+-- Monitor-UI (externer Advanced Monitor mit Touch)
+-- ============================================
+
+-- Sammelt die aktuell gezeichneten Button-Bereiche fuer Touch-Erkennung.
+-- Wird bei jedem monitorZeichnen() neu befuellt.
+local monitorButtons = {}
+
+local FARBE = monitor and {
+    hintergrund = colors.black,
+    text = colors.white,
+    text_gedimmt = colors.gray,
+    button_automatik = colors.blue,
+    button_manuell = colors.gray,
+    button_gesperrt = colors.red,
+    status_treppe = colors.green,
+    status_boden = colors.orange,
+} or nil
+
+local function monitorButton(x, y, breite, text, hintergrundfarbe, aktion)
+    if not monitor then return end
+    monitor.setCursorPos(x, y)
+    monitor.setBackgroundColor(hintergrundfarbe)
+    monitor.setTextColor(FARBE.text)
+    local beschriftung = text .. string.rep(" ", math.max(0, breite - #text))
+    monitor.write(beschriftung)
+    monitor.setBackgroundColor(FARBE.hintergrund)
+    table.insert(monitorButtons, { x1 = x, y1 = y, x2 = x + breite - 1, y2 = y, aktion = aktion })
+end
+
+local function monitorZeichnen()
+    if not monitor then return end
+    monitorButtons = {}
+
+    monitor.setBackgroundColor(FARBE.hintergrund)
+    monitor.clear()
+    monitor.setTextColor(FARBE.text)
+
+    monitor.setCursorPos(2, 1)
+    monitor.write("Treppen-/Boden-Steuerung")
+
+    monitor.setCursorPos(2, 2)
+    local statusFarbe = (zustand == "treppe") and FARBE.status_treppe or FARBE.status_boden
+    monitor.setTextColor(statusFarbe)
+    monitor.write("Status: " .. tostring(zustand))
+    monitor.setTextColor(FARBE.text)
+
+    monitor.setCursorPos(2, 3)
+    if verriegelt then
+        monitor.setTextColor(FARBE.button_gesperrt)
+        monitor.write("Bewegung laeuft ...")
+        monitor.setTextColor(FARBE.text)
+    else
+        monitor.setTextColor(FARBE.text_gedimmt)
+        monitor.write("Bereit")
+        monitor.setTextColor(FARBE.text)
+    end
+
+    monitorButton(2, 5, 24, "AUTOMATIK: WECHSELN", FARBE.button_automatik, "automatik")
+
+    monitor.setCursorPos(2, 7)
+    monitor.write("-- Manuelle Fahrt --")
+
+    monitorButton(2, 9,  11, "Treppe1 Aus", FARBE.button_manuell, "treppe1_aus")
+    monitorButton(14, 9, 11, "Treppe1 Ein", FARBE.button_manuell, "treppe1_ein")
+
+    monitorButton(2, 11,  11, "Treppe2 Aus", FARBE.button_manuell, "treppe2_aus")
+    monitorButton(14, 11, 11, "Treppe2 Ein", FARBE.button_manuell, "treppe2_ein")
+
+    monitorButton(2, 13,  11, "Boden Aus", FARBE.button_manuell, "boden_aus")
+    monitorButton(14, 13, 11, "Boden Ein", FARBE.button_manuell, "boden_ein")
+
+    monitor.setCursorPos(2, 15)
+    monitor.setTextColor(FARBE.text_gedimmt)
+    monitor.write("Whitelist im Bereich: " .. (erlaubterSpielerImBereich() and "ja" or "nein"))
+    monitor.setTextColor(FARBE.text)
+end
+
+-- Fuehrt eine manuelle Achsen-Aktion vom Monitor aus, mit derselben
+-- lockeren Verriegelung wie bei Menuepunkt 4/5/6 (nur Busy-Check).
+local function monitorAktionAusfuehren(aktion)
+    if aktion == "automatik" then
+        if not ausloesen() then
+            print("Monitor: Automatik gesperrt (System nicht in Endlage oder Bewegung laeuft)")
+        end
+        return
+    end
+
+    if not verriegelungAnfordernManuell() then
+        print("Monitor: Aktion '" .. aktion .. "' gesperrt (Bewegung laeuft bereits)")
+        return
+    end
+
+    if aktion == "treppe1_aus" then treppe1Ausfahren()
+    elseif aktion == "treppe1_ein" then treppe1Einfahren()
+    elseif aktion == "treppe2_aus" then treppe2Y(treppe2_aus, RICHTUNG_T2_AUS, relay_t2_y_ausgefahren, "faehrt aus (Monitor)")
+    elseif aktion == "treppe2_ein" then treppe2Y(treppe2_ein, RICHTUNG_T2_EIN, relay_t2_y_eingefahren, "faehrt ein (Monitor)")
+    elseif aktion == "boden_aus" then bodenAusfahren()
+    elseif aktion == "boden_ein" then bodenEinfahren()
+    end
+
+    verriegelungFreigeben()
+end
+
+local function monitorUeberwachung()
+    if not monitor then
+        while true do sleep(3600) end  -- Kein Monitor: Funktion bleibt inaktiv
+    end
+
+    monitorZeichnen()
+    local letzterZustand, letzteVerriegelung = zustand, verriegelt
+
+    while true do
+        local event, seite, x, y = os.pullEvent()
+
+        if event == "monitor_touch" then
+            for _, btn in ipairs(monitorButtons) do
+                if x >= btn.x1 and x <= btn.x2 and y >= btn.y1 and y <= btn.y2 then
+                    monitorAktionAusfuehren(btn.aktion)
+                    break
+                end
+            end
+            monitorZeichnen()
+        elseif event == "timer" then
+            -- kein eigener Timer hier, ignorieren
+        end
+
+        -- Regelmaessig neu zeichnen, wenn sich Status/Verriegelung durch
+        -- Automatik/Geofence im Hintergrund geaendert hat.
+        if zustand ~= letzterZustand or verriegelt ~= letzteVerriegelung then
+            monitorZeichnen()
+            letzterZustand, letzteVerriegelung = zustand, verriegelt
+        end
+    end
+end
+
+-- ============================================
 -- UI
 -- ============================================
 
@@ -787,5 +927,5 @@ end
 ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
-parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung)
+parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
 
