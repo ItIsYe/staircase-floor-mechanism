@@ -52,16 +52,17 @@ So findet ihr heraus, welcher Standardname zu welcher Funktion gehoert:
 
 Nicht jede Achsen-Position hat einen eigenen Kontakt -- manche Kontakte bestaetigen bewusst mehrere Achsen gleichzeitig, weil sie physisch nur in genau dieser Kombination schalten koennen.
 
-**Treppenmodul1** (3 Kontakte):
+**Treppenmodul1** (4 Kontakte):
 | Kontakt | Bestaetigt | Relay |
 |---|---|---|
 | Y ausgefahren | Y-Achse ausgefahren (Treppe) | `redstone_relay_20` |
 | Y eingefahren | Y-Achse eingefahren (Grundstellung) | `redstone_relay_21` |
 | Z unten | Z-Achse unten -- nur lesbar, waehrend Y noch ausgefahren ist | `redstone_relay_24` |
+| Z unten (bei Y eingefahren) | Z-Achse unten, bestaetigt WAEHREND Y bereits eingefahren ist (Ruheposition) | `redstone_relay_31` |
 
-**Wichtig:** Der Z-unten-Kontakt schaltet nur, solange Y noch ausgefahren ist -- sobald Y einfaehrt, geht er aus, auch wenn Z physisch weiterhin unten steht. Er taugt daher NICHT als dauerhafte Zustandsbestaetigung, sondern wird nur waehrend der Z-Bewegung selbst geprueft (in `treppe1Einfahren()`, Schritt 1, solange Y noch nicht zurueckgefahren ist).
+**Wichtig:** Der Z-unten-Kontakt (`redstone_relay_24`) schaltet nur, solange Y noch ausgefahren ist -- sobald Y einfaehrt, geht er aus, auch wenn Z physisch weiterhin unten steht. Er wird daher nur waehrend der Z-Bewegung selbst geprueft (in `treppe1Einfahren()`, Schritt 1, solange Y noch nicht zurueckgefahren ist). Fuer die dauerhafte Bestaetigung im Ruhezustand gibt es den zweiten, eigenstaendigen Kontakt `redstone_relay_31`, der genau in der Y-eingefahren-Position funktioniert.
 
-"Treppe"-Zustand: Y-ausgefahren-Kontakt allein. "Grundstellung"-Zustand (verschwunden), dauerhaft: Y-eingefahren-Kontakt allein (nicht mit Z-unten kombiniert, siehe oben).
+"Treppe"-Zustand: Y-ausgefahren-Kontakt allein. "Grundstellung"-Zustand (verschwunden), dauerhaft: Y-eingefahren UND Z-unten-bei-Y-eingefahren zusammen.
 
 **Treppenmodul2** (2 Kontakte):
 | Kontakt | Bestaetigt | Relay |
@@ -191,6 +192,7 @@ Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das 
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+
 
 
 
