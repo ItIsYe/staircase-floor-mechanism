@@ -598,10 +598,31 @@ end
 -- ============================================
 -- Monitor-UI (externer Advanced Monitor mit Touch)
 -- ============================================
+-- Monitor-UI (externer Advanced Monitor mit Touch)
+-- ============================================
+
+-- Liste aller Kontakte fuer die Diagnose-Anzeige (Terminal + Monitor)
+local function kontaktListe()
+    return {
+        { name = "Ausgang Treppe1-Z", relay = relay_treppe1_z, istEingang = false },
+        { name = "Ausgang Boden-Z",   relay = relay_boden_z,   istEingang = false },
+        { name = "Ausgang Boden-X",   relay = relay_boden_x,   istEingang = false },
+        { name = "Treppe1 Y ausgefahren", relay = relay_t1_y_ausgefahren, istEingang = true },
+        { name = "Treppe1 Y eingefahren", relay = relay_t1_y_eingefahren, istEingang = true },
+        { name = "Treppe1 Z unten",       relay = relay_t1_z_unten,       istEingang = true },
+        { name = "Treppe2 Y ausgefahren", relay = relay_t2_y_ausgefahren, istEingang = true },
+        { name = "Treppe2 Y eingefahren", relay = relay_t2_y_eingefahren, istEingang = true },
+        { name = "Boden X links",         relay = relay_b_x_links,        istEingang = true },
+        { name = "Boden X rechts",        relay = relay_b_x_rechts,       istEingang = true },
+        { name = "Boden Z-unten+A90",     relay = relay_b_z_unten_a90,    istEingang = true },
+        { name = "Boden Z-oben+A0",       relay = relay_b_z_oben_a0,      istEingang = true },
+    }
+end
 
 -- Sammelt die aktuell gezeichneten Button-Bereiche fuer Touch-Erkennung.
 -- Wird bei jedem monitorZeichnen() neu befuellt.
 local monitorButtons = {}
+local monitorModus = "haupt"  -- "haupt" oder "kontakte"
 
 local FARBE = monitor and {
     hintergrund = colors.black,
@@ -632,6 +653,25 @@ local function monitorZeichnen()
     monitor.setBackgroundColor(FARBE.hintergrund)
     monitor.clear()
     monitor.setTextColor(FARBE.text)
+
+    if monitorModus == "kontakte" then
+        monitor.setCursorPos(2, 1)
+        monitor.write("=== Kontakte-Status ===")
+
+        local zeile = 3
+        for _, k in ipairs(kontaktListe()) do
+            local an = relaisAn(k.relay)
+            monitor.setCursorPos(2, zeile)
+            monitor.setTextColor(an and colors.lime or colors.gray)
+            local typ = k.istEingang and "[E]" or "[A]"
+            monitor.write(typ .. " " .. k.name .. ": " .. (an and "AN" or "aus"))
+            monitor.setTextColor(FARBE.text)
+            zeile = zeile + 1
+        end
+
+        monitorButton(2, zeile + 1, 12, "Zurueck", FARBE.button_manuell, "zurueck")
+        return
+    end
 
     monitor.setCursorPos(2, 1)
     monitor.write("Treppen-/Boden-Steuerung")
@@ -667,7 +707,9 @@ local function monitorZeichnen()
     monitorButton(2, 13,  11, "Boden Aus", FARBE.button_manuell, "boden_aus")
     monitorButton(14, 13, 11, "Boden Ein", FARBE.button_manuell, "boden_ein")
 
-    monitor.setCursorPos(2, 15)
+    monitorButton(2, 15, 12, "Kontakte", FARBE.button_manuell, "kontakte_anzeigen")
+
+    monitor.setCursorPos(2, 17)
     monitor.setTextColor(FARBE.text_gedimmt)
     monitor.write("Whitelist im Bereich: " .. (erlaubterSpielerImBereich() and "ja" or "nein"))
     monitor.setTextColor(FARBE.text)
@@ -676,6 +718,15 @@ end
 -- Fuehrt eine manuelle Achsen-Aktion vom Monitor aus, mit derselben
 -- lockeren Verriegelung wie bei Menuepunkt 4/5/6 (nur Busy-Check).
 local function monitorAktionAusfuehren(aktion)
+    if aktion == "kontakte_anzeigen" then
+        monitorModus = "kontakte"
+        return
+    end
+    if aktion == "zurueck" then
+        monitorModus = "haupt"
+        return
+    end
+
     if aktion == "automatik" then
         if not ausloesen() then
             print("Monitor: Automatik gesperrt (System nicht in Endlage oder Bewegung laeuft)")
@@ -706,11 +757,13 @@ local function monitorUeberwachung()
 
     monitorZeichnen()
     local letzterZustand, letzteVerriegelung = zustand, verriegelt
+    local refreshTimer = os.startTimer(1)
 
     while true do
-        local event, seite, x, y = os.pullEvent()
+        local event, p1, p2, p3 = os.pullEvent()
 
         if event == "monitor_touch" then
+            local x, y = p2, p3
             for _, btn in ipairs(monitorButtons) do
                 if x >= btn.x1 and x <= btn.x2 and y >= btn.y1 and y <= btn.y2 then
                     monitorAktionAusfuehren(btn.aktion)
@@ -718,15 +771,14 @@ local function monitorUeberwachung()
                 end
             end
             monitorZeichnen()
-        elseif event == "timer" then
-            -- kein eigener Timer hier, ignorieren
-        end
-
-        -- Regelmaessig neu zeichnen, wenn sich Status/Verriegelung durch
-        -- Automatik/Geofence im Hintergrund geaendert hat.
-        if zustand ~= letzterZustand or verriegelt ~= letzteVerriegelung then
-            monitorZeichnen()
-            letzterZustand, letzteVerriegelung = zustand, verriegelt
+        elseif event == "timer" and p1 == refreshTimer then
+            -- Regelmaessiges Neuzeichnen: haelt die Kontakte-Ansicht live
+            -- aktuell und faengt Zustandsaenderungen durch Automatik/Geofence ab.
+            if monitorModus == "kontakte" or zustand ~= letzterZustand or verriegelt ~= letzteVerriegelung then
+                monitorZeichnen()
+                letzterZustand, letzteVerriegelung = zustand, verriegelt
+            end
+            refreshTimer = os.startTimer(1)
         end
     end
 end
@@ -753,6 +805,7 @@ local function zeichneUI()
     print("")
     print("-- Geschwindigkeiten (RPM) --")
     print("g) Geschwindigkeiten anzeigen/aendern")
+    print("k) Kontakte-Status anzeigen")
     print("")
     print("-- Manuelle Fahrt --")
     print("4) Treppe1 manuell")
@@ -782,6 +835,35 @@ local function rpmEingabe(prompt, alt)
         return n
     end
     return alt
+end
+
+-- Zeigt die Kontakte live an, aktualisiert jede Sekunde, bis eine Taste
+-- gedrueckt wird.
+local function kontakteAnzeigen()
+    while true do
+        term.clear()
+        term.setCursorPos(1, 1)
+        print("=== Kontakte-Status (live) ===")
+        print("")
+        for _, k in ipairs(kontaktListe()) do
+            local an = relaisAn(k.relay)
+            local typ = k.istEingang and "[Eingang]" or "[Ausgang]"
+            print(typ .. " " .. k.name .. ": " .. (an and "AN" or "aus"))
+        end
+        print("")
+        print("Beliebige Taste = zurueck, aktualisiert automatisch jede Sekunde")
+
+        local timer = os.startTimer(1)
+        local event = os.pullEvent()
+        while event ~= "timer" and event ~= "key" and event ~= "char" do
+            event = os.pullEvent()
+        end
+        if event == "key" or event == "char" then
+            os.cancelTimer(timer)
+            return
+        end
+        -- event == "timer": Schleife wiederholt sich, neu zeichnen
+    end
 end
 
 local function geschwindigkeitenMenu()
@@ -899,6 +981,9 @@ local function uiSchleife()
 
         elseif auswahl == "g" then
             geschwindigkeitenMenu()
+
+        elseif auswahl == "k" then
+            kontakteAnzeigen()
 
         elseif auswahl == "4" then treppe1Manuell()
         elseif auswahl == "5" then treppe2Manuell()
