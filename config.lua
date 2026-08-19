@@ -49,8 +49,8 @@ return {
         -- da alle 3 ueber denselben Gearshift laufen und die Redstone-
         -- Signale nur auswaehlen, WELCHE Achse gerade angetrieben wird.
         -- Jede Achse braucht daher ihren eigenen Richtungsmodifier.
-        boden_x_ausfahren = 1,
-        boden_x_einfahren = -1,
+        boden_x_ausfahren = -1,
+        boden_x_einfahren = 1,
         boden_z_ausfahren = 1,
         boden_z_einfahren = -1,
         boden_a_ausfahren = 1,   -- Drehung zurueck (90 -> 0 Grad)
