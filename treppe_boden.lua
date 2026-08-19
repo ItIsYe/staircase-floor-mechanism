@@ -162,13 +162,14 @@ local relay_t1_y_eingefahren = findRelay(cfg.redstone_relais.eingaenge.treppe1_y
 local relay_t1_z_unten       = findRelay(cfg.redstone_relais.eingaenge.treppe1_z_unten)
 
 -- Treppe1 "Treppe"-Zustand: Y ausgefahren allein (kein Z-oben-Kontakt vorhanden)
--- Treppe1 "Grundstellung"-Zustand (verschwunden): Y eingefahren UND Z unten zusammen
+-- Treppe1 "Grundstellung"-Zustand (verschwunden): Y eingefahren allein.
+-- WICHTIG: Der Z-unten-Kontakt (relay_t1_z_unten) ist NUR lesbar, waehrend
+-- Y noch ausgefahren ist -- sobald Y einfaehrt, geht der Kontakt aus, auch
+-- wenn Z physisch wirklich unten steht. Er taugt daher NICHT als dauerhafte
+-- Bestaetigung, sondern wird nur waehrend der Z-Bewegung selbst (in
+-- treppe1Einfahren(), Schritt 1, solange Y noch ausgefahren ist) geprueft.
 local relay_t1_treppe_bestaetigt = relay_t1_y_ausgefahren
-local relay_t1_grund_bestaetigt = {
-    getInput = function(side)
-        return relay_t1_y_eingefahren.getInput(side) and relay_t1_z_unten.getInput(side)
-    end
-}
+local relay_t1_grund_bestaetigt = relay_t1_y_eingefahren
 
 -- Treppenmodul2: nur Y-Achse (beide Endpunkte, je ein eigener Kontakt)
 local relay_t2_y_ausgefahren = findRelay(cfg.redstone_relais.eingaenge.treppe2_y_ausgefahren)
@@ -1075,6 +1076,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
