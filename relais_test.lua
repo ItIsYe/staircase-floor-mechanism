@@ -53,6 +53,7 @@ local function baueListe()
         { label = "Treppe1 Y ausgefahren", name = cfg.redstone_relais.eingaenge.treppe1_y_ausgefahren },
         { label = "Treppe1 Y eingefahren", name = cfg.redstone_relais.eingaenge.treppe1_y_eingefahren },
         { label = "Treppe1 Z unten",       name = cfg.redstone_relais.eingaenge.treppe1_z_unten },
+        { label = "Treppe1 Z unten (bei Y ein)", name = cfg.redstone_relais.eingaenge.treppe1_z_unten_bei_y_eingefahren },
         { label = "Treppe2 Y ausgefahren", name = cfg.redstone_relais.eingaenge.treppe2_y_ausgefahren },
         { label = "Treppe2 Y eingefahren", name = cfg.redstone_relais.eingaenge.treppe2_y_eingefahren },
         { label = "Boden X links",         name = cfg.redstone_relais.eingaenge.boden_x_links },
@@ -118,3 +119,4 @@ while true do
         end
     end
 end
+
