@@ -57,9 +57,11 @@ Nicht jede Achsen-Position hat einen eigenen Kontakt -- manche Kontakte bestaeti
 |---|---|---|
 | Y ausgefahren | Y-Achse ausgefahren (Treppe) | `redstone_relay_20` |
 | Y eingefahren | Y-Achse eingefahren (Grundstellung) | `redstone_relay_21` |
-| Z unten | Z-Achse unten (Grundstellung) | `redstone_relay_24` |
+| Z unten | Z-Achse unten -- nur lesbar, waehrend Y noch ausgefahren ist | `redstone_relay_24` |
 
-"Treppe"-Zustand: Y-ausgefahren-Kontakt allein (kein Z-oben-Kontakt vorhanden). "Grundstellung"-Zustand (verschwunden): Y-eingefahren UND Z-unten zusammen.
+**Wichtig:** Der Z-unten-Kontakt schaltet nur, solange Y noch ausgefahren ist -- sobald Y einfaehrt, geht er aus, auch wenn Z physisch weiterhin unten steht. Er taugt daher NICHT als dauerhafte Zustandsbestaetigung, sondern wird nur waehrend der Z-Bewegung selbst geprueft (in `treppe1Einfahren()`, Schritt 1, solange Y noch nicht zurueckgefahren ist).
+
+"Treppe"-Zustand: Y-ausgefahren-Kontakt allein. "Grundstellung"-Zustand (verschwunden), dauerhaft: Y-eingefahren-Kontakt allein (nicht mit Z-unten kombiniert, siehe oben).
 
 **Treppenmodul2** (2 Kontakte):
 | Kontakt | Bestaetigt | Relay |
@@ -189,5 +191,6 @@ Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das 
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+
 
 
