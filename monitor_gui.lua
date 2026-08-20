@@ -42,6 +42,8 @@ function M.new(opt)
     assert(type(opt.automatik) == "function", "monitor_gui: automatik fehlt")
     assert(type(opt.manuell) == "function", "monitor_gui: manuell fehlt")
     assert(type(opt.kontakte) == "function", "monitor_gui: kontakte fehlt")
+    assert(type(opt.playerSensorAktiv) == "function", "monitor_gui: playerSensorAktiv fehlt")
+    assert(type(opt.playerSensorToggle) == "function", "monitor_gui: playerSensorToggle fehlt")
 
     local monitor = opt.monitor
     local buttons = {}
@@ -124,13 +126,21 @@ function M.new(opt)
         local w, h = groesse()
         if h < 4 then return end
         fill(1, h, w, 1, FARBE.panel)
+
+        local sensorAktiv = opt.playerSensorAktiv()
         local spieler = false
-        if type(opt.spielerImBereich) == "function" then
+        if sensorAktiv and type(opt.spielerImBereich) == "function" then
             local ok, wert = pcall(opt.spielerImBereich)
             spieler = ok and wert == true
         end
+
         local verriegelt = opt.istVerriegelt()
-        text(2, h, "SPIELER " .. (spieler and "JA" or "NEIN"), spieler and FARBE.ok or FARBE.gedimmt, FARBE.panel)
+        if sensorAktiv then
+            text(2, h, "SPIELER " .. (spieler and "JA" or "NEIN"), spieler and FARBE.ok or FARBE.gedimmt, FARBE.panel)
+        else
+            text(2, h, "SENSOR AUS", FARBE.warnung, FARBE.panel)
+        end
+
         local lockText = "LOCK " .. (verriegelt and "AN" or "AUS")
         text(math.max(2, w - #lockText - 1), h, lockText, verriegelt and FARBE.warnung or FARBE.gedimmt, FARBE.panel)
     end
@@ -141,6 +151,7 @@ function M.new(opt)
         local w, h = groesse()
         local zustand = opt.getZustand()
         local verriegelt = opt.istVerriegelt()
+        local sensorAktiv = opt.playerSensorAktiv()
 
         text(2, 4, "AKTUELLER ZUSTAND", FARBE.gedimmt)
 
@@ -197,6 +208,14 @@ function M.new(opt)
         else
             button(2, 17, math.min(12, w - 2), 1, "MANUELL", FARBE.buttonSekundaer, "manuell_oeffnen", not verriegelt)
             button(math.min(w - 10, 15), 17, math.min(12, w - 15), 1, "DIAGNOSE", FARBE.buttonSekundaer, "diagnose", true)
+        end
+
+        local sensorLabel = sensorAktiv and "PLAYER-SENSOR: AN" or "PLAYER-SENSOR: AUS"
+        local sensorFarbe = sensorAktiv and FARBE.aktiv or FARBE.buttonGefahr
+        if h >= 22 then
+            button(2, 20, math.max(1, w - 3), 2, sensorLabel, sensorFarbe, "player_sensor_toggle", true)
+        elseif h >= 20 then
+            button(2, 19, math.max(1, w - 3), 1, sensorLabel, sensorFarbe, "player_sensor_toggle", true)
         end
 
         footer()
@@ -302,6 +321,9 @@ function M.new(opt)
         elseif aktion == "automatik" then
             opt.automatik()
             return
+        elseif aktion == "player_sensor_toggle" then
+            opt.playerSensorToggle()
+            return
         end
 
         opt.manuell(aktion)
@@ -322,6 +344,7 @@ function M.new(opt)
         local refreshTimer = os.startTimer(1)
         local letzterZustand = opt.getZustand()
         local letzteVerriegelung = opt.istVerriegelt()
+        local letzterSensorZustand = opt.playerSensorAktiv()
 
         while true do
             local event, p1, p2, p3 = os.pullEvent()
@@ -334,13 +357,16 @@ function M.new(opt)
             elseif event == "timer" and p1 == refreshTimer then
                 local neuerZustand = opt.getZustand()
                 local neueVerriegelung = opt.istVerriegelt()
+                local neuerSensorZustand = opt.playerSensorAktiv()
                 if modus == "diagnose"
                     or neuerZustand ~= letzterZustand
-                    or neueVerriegelung ~= letzteVerriegelung then
+                    or neueVerriegelung ~= letzteVerriegelung
+                    or neuerSensorZustand ~= letzterSensorZustand then
                     zeichnen()
                 end
                 letzterZustand = neuerZustand
                 letzteVerriegelung = neueVerriegelung
+                letzterSensorZustand = neuerSensorZustand
                 refreshTimer = os.startTimer(1)
             end
         end
