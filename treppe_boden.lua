@@ -83,6 +83,10 @@ local runtime = {
     rpm_treppe2_einfahren   = cfg.geschwindigkeiten.rpm.treppe2_einfahren,
     rpm_boden_ausfahren     = cfg.geschwindigkeiten.rpm.boden_ausfahren,
     rpm_boden_einfahren     = cfg.geschwindigkeiten.rpm.boden_einfahren,
+
+    -- Laufzeitschalter fuer die Geofence-/Player-Detector-Automatik.
+    -- Wird in treppe_runtime.cfg gespeichert und ueberlebt Neustarts.
+    player_sensor_aktiv = true,
 }
 
 local function ladeRuntime()
@@ -704,7 +708,12 @@ end
 -- Zugriffskontrolle / Geofence
 -- ============================================
 
+local function playerSensorAktiv()
+    return runtime.player_sensor_aktiv ~= false
+end
+
 local function erlaubterSpielerImBereich()
+    if not playerSensorAktiv() then return false end
     if not playerDetector then return false end
     for _, name in ipairs(ERLAUBTE_SPIELER) do
         if playerDetector.isPlayerInRange(PLAYER_RANGE, name) then
@@ -718,6 +727,9 @@ local function geofenceUeberwachung()
     while true do
         if redstone.getInput(RS_TRIGGER_SIDE) then
             -- Redstone hat Vorrang
+        elseif not playerSensorAktiv() then
+            -- Player-Sensor bewusst deaktiviert: Geofence greift gar nicht ein.
+            -- Insbesondere wird "Sensor AUS" NICHT als "kein Spieler" gewertet.
         elseif erlaubterSpielerImBereich() then
             zielzustandErzwingen("treppe")
         else
@@ -813,6 +825,12 @@ local function monitorAutomatikAktion()
     end
 end
 
+local function monitorPlayerSensorToggle()
+    runtime.player_sensor_aktiv = not playerSensorAktiv()
+    speichereRuntime()
+    log("Monitor: Player-Sensor " .. (playerSensorAktiv() and "aktiviert" or "deaktiviert"))
+end
+
 local function monitorUeberwachung()
     if not monitor then
         while true do sleep(3600) end  -- Kein Monitor: Funktion bleibt inaktiv
@@ -834,6 +852,8 @@ local function monitorUeberwachung()
         getZustand = function() return zustand end,
         istVerriegelt = function() return verriegelt end,
         spielerImBereich = erlaubterSpielerImBereich,
+        playerSensorAktiv = playerSensorAktiv,
+        playerSensorToggle = monitorPlayerSensorToggle,
         kontakte = monitorKontakte,
         automatik = monitorAutomatikAktion,
         manuell = monitorManuelleAktion,
