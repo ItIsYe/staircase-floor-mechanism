@@ -331,6 +331,7 @@ end
 -- ============================================
 
 local function warteAufRelay(inputRelay, zielZustand)
+    sleep(0.25)  -- kurze Settle-Pause, damit Redstone sich propagieren kann
     local start = os.clock()
     while relaisAn(inputRelay) ~= zielZustand do
         if os.clock() - start > TIMEOUT_S then
@@ -363,6 +364,11 @@ end
 -- runtime.auto_max_schritte Schritten, falls der Kontakt nie schaltet.
 local function fahreBisKontakt(gearshift, richtung, zielRelay, beschreibung)
     log(beschreibung .. " (Auto bis Kontakt) ...")
+    -- Kurze Pause, damit ein gerade umgeschaltetes Achsen-Signal sich erst
+    -- propagieren kann, bevor der Kontakt geprueft wird -- sonst kann der
+    -- allererste Check noch einen veralteten Wert von VOR dem Umschalten
+    -- lesen und faelschlich "0 Schritte" melden.
+    sleep(0.25)
     local schritte = 0
     while not relaisAn(zielRelay) and schritte < runtime.auto_max_schritte do
         gearshift.move(runtime.auto_schrittgroesse, richtung)
@@ -1150,6 +1156,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
