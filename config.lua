@@ -14,7 +14,7 @@
 
 return {
 
-    config_version = 23,
+    config_version = 24,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -156,7 +156,15 @@ return {
     -- Pause faengt das ab. 0 = keine Pause.
     sicherheitspause_sekunden = 0.5,
 
+    -- Settle-Pause VOR der allerersten Kontaktpruefung, direkt nachdem ein
+    -- Achsen-Signal umgeschaltet wurde. Faengt ab, dass der erste Check
+    -- noch einen veralteten Redstone-Wert von VOR dem Umschalten liest.
+    -- Falls "Kontakt erreicht nach 0 Schritten" trotzdem noch faelschlich
+    -- auftritt, hier erhoehen (z.B. auf 1.0).
+    settle_pause_sekunden = 0.25,
+
 }
+
 
 
 
