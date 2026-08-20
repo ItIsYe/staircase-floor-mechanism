@@ -78,7 +78,7 @@ return {
             -- Treppenmodul1: Y-Achse (beide Endpunkte) + Z-Achse (nur unten)
             treppe1_y_ausgefahren = "redstone_relay_20",  -- Y ausgefahren (Treppe)
             treppe1_y_eingefahren = "redstone_relay_21",  -- Y eingefahren (Grundstellung)
-            treppe1_z_unten       = "redstone_relay_24",  -- Z unten (nur lesbar waehrend Y ausgefahren)
+            treppe1_z_unten       = "redstone_relay_32",  -- Z unten (nur lesbar waehrend Y ausgefahren)
             treppe1_z_unten_bei_y_eingefahren = "redstone_relay_31",  -- Z unten, bestaetigt WAEHREND Y eingefahren ist (Ruheposition)
 
             -- Treppenmodul2: nur Y-Achse (beide Endpunkte)
