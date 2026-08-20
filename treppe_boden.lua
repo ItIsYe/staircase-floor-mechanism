@@ -695,11 +695,22 @@ local function zustandInitialisieren()
         zustand = "boden"
         log("Zustand erkannt: Boden sichtbar")
     else
-        log("Zustand nicht eindeutig -- Annahme: Grundstellung. Fahre einmalig zur Treppe.")
+        log("Zustand nicht eindeutig -- Annahme: Grundstellung. Stelle zuerst Boden-X sicher, dann fahre zur Treppe.")
         zustand = "boden"
         relaisSetzen(relay_treppe1_z, false, "Treppe1-Z")
         relaisSetzen(relay_boden_z, false, "Boden-Z")
         relaisSetzen(relay_boden_x, false, "Boden-X")
+
+        -- Boden-Z's Vorbedingung ("X rechts") kann bei unbekanntem Zustand
+        -- NICHT einfach angenommen werden -- deshalb wird X hier zuerst
+        -- explizit auf "rechts" gefahren. bodenX hat selbst KEINE
+        -- Vorbedingung und ist daher aus jeder Ausgangsposition sicher
+        -- (steht X schon auf rechts, meldet fahreBisKontakt sofort Erfolg).
+        if not bodenX(boden_aus, RICHTUNG_B_X_AUS, relay_b_x_rechts, "Initialisierung: X sicherstellen") then
+            log("WARNUNG: Initialisierung fehlgeschlagen -- Boden-X konnte nicht auf 'rechts' gebracht werden. Bitte Kontakte pruefen (Menuepunkt k) und Zustand manuell klaeren.")
+            return
+        end
+
         if not treppeHerstellen() then
             log("WARNUNG: Initialisierungs-Ablauf fehlgeschlagen. Bitte Kontakte pruefen (Menuepunkt k) und Zustand manuell klaeren.")
         end
@@ -1132,6 +1143,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
