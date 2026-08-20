@@ -1,7 +1,7 @@
 -- ============================================
 -- Installer / Updater fuer Treppen-/Boden-Mechanismus
 --
--- treppe_boden.lua wird bei jedem Lauf komplett aktualisiert.
+-- treppe_boden.lua und monitor_gui.lua werden bei jedem Lauf komplett aktualisiert.
 -- config.lua wird bei Bedarf MIGRIERT statt ueberschrieben:
 --   - neue Felder aus der Vorlage werden ergaenzt
 --   - bereits gesetzte eigene Werte bleiben erhalten
@@ -174,6 +174,15 @@ else
     print("FEHLGESCHLAGEN")
 end
 
+write("Lade monitor_gui.lua ... ")
+local monitorGuiText = herunterladenAlsText("monitor_gui.lua")
+if monitorGuiText then
+    dateiSchreiben("monitor_gui.lua", monitorGuiText)
+    print("OK")
+else
+    print("FEHLGESCHLAGEN")
+end
+
 configMigrieren()
 
 -- startup.lua: startet treppe_boden.lua automatisch bei jedem PC-Boot.
@@ -205,5 +214,6 @@ print("OK")
 print("")
 print("Fertig. Der Mechanismus startet ab jetzt automatisch bei jedem PC-Neustart.")
 print("Manueller Start jederzeit moeglich mit: treppe_boden")
-print("Erneutes Ausfuehren dieses Installers aktualisiert treppe_boden.lua und")
-print("startup.lua und migriert config.lua automatisch (eigene Werte bleiben erhalten).")
+print("Erneutes Ausfuehren dieses Installers aktualisiert treppe_boden.lua,")
+print("monitor_gui.lua und startup.lua und migriert config.lua automatisch")
+print("(eigene Werte bleiben erhalten).")

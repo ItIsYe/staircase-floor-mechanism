@@ -83,6 +83,10 @@ local runtime = {
     rpm_treppe2_einfahren   = cfg.geschwindigkeiten.rpm.treppe2_einfahren,
     rpm_boden_ausfahren     = cfg.geschwindigkeiten.rpm.boden_ausfahren,
     rpm_boden_einfahren     = cfg.geschwindigkeiten.rpm.boden_einfahren,
+
+    -- Laufzeitschalter fuer die Geofence-/Player-Detector-Automatik.
+    -- Wird in treppe_runtime.cfg gespeichert und ueberlebt Neustarts.
+    player_sensor_aktiv = true,
 }
 
 local function ladeRuntime()
@@ -704,7 +708,12 @@ end
 -- Zugriffskontrolle / Geofence
 -- ============================================
 
+local function playerSensorAktiv()
+    return runtime.player_sensor_aktiv ~= false
+end
+
 local function erlaubterSpielerImBereich()
+    if not playerSensorAktiv() then return false end
     if not playerDetector then return false end
     for _, name in ipairs(ERLAUBTE_SPIELER) do
         if playerDetector.isPlayerInRange(PLAYER_RANGE, name) then
@@ -718,6 +727,9 @@ local function geofenceUeberwachung()
     while true do
         if redstone.getInput(RS_TRIGGER_SIDE) then
             -- Redstone hat Vorrang
+        elseif not playerSensorAktiv() then
+            -- Player-Sensor bewusst deaktiviert: Geofence greift gar nicht ein.
+            -- Insbesondere wird "Sensor AUS" NICHT als "kein Spieler" gewertet.
         elseif erlaubterSpielerImBereich() then
             zielzustandErzwingen("treppe")
         else
@@ -762,123 +774,35 @@ local function kontaktListe()
     }
 end
 
--- Sammelt die aktuell gezeichneten Button-Bereiche fuer Touch-Erkennung.
--- Wird bei jedem monitorZeichnen() neu befuellt.
-local monitorButtons = {}
-local monitorModus = "haupt"  -- "haupt" oder "kontakte"
+-- Die eigentliche Darstellung/Navigation liegt isoliert in monitor_gui.lua.
+-- Dieser Adapter gibt nur den aktuellen Zustand und bestehende Aktionen weiter.
+local function monitorKontakte()
+    return {
+        { gruppe = "AUSGAENGE", name = "Treppe1 Z Auswahl", aktiv = relaisAn(relay_treppe1_z) },
+        { gruppe = "AUSGAENGE", name = "Boden Z Auswahl",   aktiv = relaisAn(relay_boden_z) },
+        { gruppe = "AUSGAENGE", name = "Boden X Auswahl",   aktiv = relaisAn(relay_boden_x) },
 
-local FARBE = monitor and {
-    hintergrund = colors.black,
-    text = colors.white,
-    text_gedimmt = colors.gray,
-    button_automatik = colors.blue,
-    button_manuell = colors.gray,
-    button_gesperrt = colors.red,
-    status_treppe = colors.green,
-    status_boden = colors.orange,
-} or nil
+        { gruppe = "TREPPE 1", name = "Y ausgefahren", aktiv = relaisAn(relay_t1_y_ausgefahren) },
+        { gruppe = "TREPPE 1", name = "Y eingefahren", aktiv = relaisAn(relay_t1_y_eingefahren) },
+        { gruppe = "TREPPE 1", name = "Z unten", aktiv = relaisAn(relay_t1_z_unten) },
+        { gruppe = "TREPPE 1", name = "Z unten / Y ein", aktiv = relaisAn(relay_t1_z_unten_bei_y_eingefahren) },
 
-local function monitorButton(x, y, breite, text, hintergrundfarbe, aktion)
-    if not monitor then return end
-    monitor.setCursorPos(x, y)
-    monitor.setBackgroundColor(hintergrundfarbe)
-    monitor.setTextColor(FARBE.text)
-    local beschriftung = text .. string.rep(" ", math.max(0, breite - #text))
-    monitor.write(beschriftung)
-    monitor.setBackgroundColor(FARBE.hintergrund)
-    table.insert(monitorButtons, { x1 = x, y1 = y, x2 = x + breite - 1, y2 = y, aktion = aktion })
+        { gruppe = "TREPPE 2", name = "Y ausgefahren", aktiv = relaisAn(relay_t2_y_ausgefahren) },
+        { gruppe = "TREPPE 2", name = "Y eingefahren", aktiv = relaisAn(relay_t2_y_eingefahren) },
+
+        { gruppe = "BODEN", name = "X links", aktiv = relaisAn(relay_b_x_links) },
+        { gruppe = "BODEN", name = "X rechts", aktiv = relaisAn(relay_b_x_rechts) },
+        { gruppe = "BODEN", name = "Z unten + A90", aktiv = relaisAn(relay_b_z_unten_a90) },
+        { gruppe = "BODEN", name = "Z oben + A0", aktiv = relaisAn(relay_b_z_oben_a0) },
+    }
 end
 
-local function monitorZeichnen()
-    if not monitor then return end
-    monitorButtons = {}
-
-    monitor.setBackgroundColor(FARBE.hintergrund)
-    monitor.clear()
-    monitor.setTextColor(FARBE.text)
-
-    if monitorModus == "kontakte" then
-        monitor.setCursorPos(2, 1)
-        monitor.write("=== Kontakte-Status ===")
-
-        local zeile = 3
-        for _, k in ipairs(kontaktListe()) do
-            local an = relaisAn(k.relay)
-            monitor.setCursorPos(2, zeile)
-            monitor.setTextColor(an and colors.lime or colors.gray)
-            local typ = k.istEingang and "[E]" or "[A]"
-            monitor.write(typ .. " " .. k.name .. ": " .. (an and "AN" or "aus"))
-            monitor.setTextColor(FARBE.text)
-            zeile = zeile + 1
-        end
-
-        monitorButton(2, zeile + 1, 12, "Zurueck", FARBE.button_manuell, "zurueck")
-        return
-    end
-
-    monitor.setCursorPos(2, 1)
-    monitor.write("Treppen-/Boden-Steuerung")
-
-    monitor.setCursorPos(2, 2)
-    local statusFarbe = (zustand == "treppe") and FARBE.status_treppe or FARBE.status_boden
-    monitor.setTextColor(statusFarbe)
-    monitor.write("Status: " .. tostring(zustand))
-    monitor.setTextColor(FARBE.text)
-
-    monitor.setCursorPos(2, 3)
-    if verriegelt then
-        monitor.setTextColor(FARBE.button_gesperrt)
-        monitor.write("Bewegung laeuft ...")
-        monitor.setTextColor(FARBE.text)
-    else
-        monitor.setTextColor(FARBE.text_gedimmt)
-        monitor.write("Bereit")
-        monitor.setTextColor(FARBE.text)
-    end
-
-    monitorButton(2, 5, 24, "AUTOMATIK: WECHSELN", FARBE.button_automatik, "automatik")
-
-    monitor.setCursorPos(2, 7)
-    monitor.write("-- Manuelle Fahrt --")
-
-    monitorButton(2, 9,  11, "Treppe1 Aus", FARBE.button_manuell, "treppe1_aus")
-    monitorButton(14, 9, 11, "Treppe1 Ein", FARBE.button_manuell, "treppe1_ein")
-
-    monitorButton(2, 11,  11, "Treppe2 Aus", FARBE.button_manuell, "treppe2_aus")
-    monitorButton(14, 11, 11, "Treppe2 Ein", FARBE.button_manuell, "treppe2_ein")
-
-    monitorButton(2, 13,  11, "Boden Aus", FARBE.button_manuell, "boden_aus")
-    monitorButton(14, 13, 11, "Boden Ein", FARBE.button_manuell, "boden_ein")
-
-    monitorButton(2, 15, 12, "Kontakte", FARBE.button_manuell, "kontakte_anzeigen")
-
-    monitor.setCursorPos(2, 17)
-    monitor.setTextColor(FARBE.text_gedimmt)
-    monitor.write("Whitelist im Bereich: " .. (erlaubterSpielerImBereich() and "ja" or "nein"))
-    monitor.setTextColor(FARBE.text)
-end
-
--- Fuehrt eine manuelle Achsen-Aktion vom Monitor aus, mit derselben
--- lockeren Verriegelung wie bei Menuepunkt 4/5/6 (nur Busy-Check).
-local function monitorAktionAusfuehren(aktion)
-    if aktion == "kontakte_anzeigen" then
-        monitorModus = "kontakte"
-        return
-    end
-    if aktion == "zurueck" then
-        monitorModus = "haupt"
-        return
-    end
-
-    if aktion == "automatik" then
-        if not ausloesen() then
-            log("Monitor: Automatik gesperrt (System nicht in Endlage oder Bewegung laeuft)")
-        end
-        return
-    end
-
+-- Fuehrt eine manuelle Achsen-Aktion aus der Monitor-GUI aus. Das Verhalten
+-- entspricht exakt der bisherigen Monitorsteuerung: nur Busy-Check, danach
+-- dieselben bereits vorhandenen Bewegungsfunktionen.
+local function monitorManuelleAktion(aktion)
     if not verriegelungAnfordernManuell() then
-        log("Monitor: Aktion '" .. aktion .. "' gesperrt (Bewegung laeuft bereits)")
+        log("Monitor: Aktion '" .. tostring(aktion) .. "' gesperrt (Bewegung laeuft bereits)")
         return
     end
 
@@ -888,9 +812,23 @@ local function monitorAktionAusfuehren(aktion)
     elseif aktion == "treppe2_ein" then treppe2Y(treppe2_ein, RICHTUNG_T2_EIN, relay_t2_y_eingefahren, "faehrt ein (Monitor)")
     elseif aktion == "boden_aus" then bodenAusfahren()
     elseif aktion == "boden_ein" then bodenEinfahren()
+    else
+        log("Monitor: Unbekannte manuelle Aktion '" .. tostring(aktion) .. "'")
     end
 
     verriegelungFreigeben()
+end
+
+local function monitorAutomatikAktion()
+    if not ausloesen() then
+        log("Monitor: Automatik gesperrt (System nicht in Endlage oder Bewegung laeuft)")
+    end
+end
+
+local function monitorPlayerSensorToggle()
+    runtime.player_sensor_aktiv = not playerSensorAktiv()
+    speichereRuntime()
+    log("Monitor: Player-Sensor " .. (playerSensorAktiv() and "aktiviert" or "deaktiviert"))
 end
 
 local function monitorUeberwachung()
@@ -898,32 +836,30 @@ local function monitorUeberwachung()
         while true do sleep(3600) end  -- Kein Monitor: Funktion bleibt inaktiv
     end
 
-    monitorZeichnen()
-    local letzterZustand, letzteVerriegelung = zustand, verriegelt
-    local refreshTimer = os.startTimer(1)
-
-    while true do
-        local event, p1, p2, p3 = os.pullEvent()
-
-        if event == "monitor_touch" then
-            local x, y = p2, p3
-            for _, btn in ipairs(monitorButtons) do
-                if x >= btn.x1 and x <= btn.x2 and y >= btn.y1 and y <= btn.y2 then
-                    monitorAktionAusfuehren(btn.aktion)
-                    break
-                end
-            end
-            monitorZeichnen()
-        elseif event == "timer" and p1 == refreshTimer then
-            -- Regelmaessiges Neuzeichnen: haelt die Kontakte-Ansicht live
-            -- aktuell und faengt Zustandsaenderungen durch Automatik/Geofence ab.
-            if monitorModus == "kontakte" or zustand ~= letzterZustand or verriegelt ~= letzteVerriegelung then
-                monitorZeichnen()
-                letzterZustand, letzteVerriegelung = zustand, verriegelt
-            end
-            refreshTimer = os.startTimer(1)
-        end
+    if not fs.exists("monitor_gui.lua") then
+        log("WARNUNG: monitor_gui.lua fehlt -- Monitor-GUI deaktiviert. Installer erneut ausfuehren.")
+        while true do sleep(3600) end
     end
+
+    local ok, guiModul = pcall(dofile, "monitor_gui.lua")
+    if not ok or type(guiModul) ~= "table" or type(guiModul.new) ~= "function" then
+        log("WARNUNG: monitor_gui.lua konnte nicht geladen werden: " .. tostring(guiModul))
+        while true do sleep(3600) end
+    end
+
+    local gui = guiModul.new({
+        monitor = monitor,
+        getZustand = function() return zustand end,
+        istVerriegelt = function() return verriegelt end,
+        spielerImBereich = erlaubterSpielerImBereich,
+        playerSensorAktiv = playerSensorAktiv,
+        playerSensorToggle = monitorPlayerSensorToggle,
+        kontakte = monitorKontakte,
+        automatik = monitorAutomatikAktion,
+        manuell = monitorManuelleAktion,
+    })
+
+    gui.run()
 end
 
 -- ============================================
@@ -1194,7 +1130,6 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
-
 
 
 
