@@ -99,6 +99,8 @@ Schrittgroesse und Sicherheitsabbruch (max. Schritte, falls der Kontakt nie komm
 
 **Sicherheitspause:** Nach jeder Kontakt-Bestaetigung (Auto-Kalibrierung oder finale Relay-Pruefung) wartet das Skript zusaetzlich `sicherheitspause_sekunden` (Standard 0,5s, in `config.lua`), bevor der naechste Schritt startet. Manche Kontakte schalten kurz bevor die Bewegung mechanisch wirklich ganz fertig ist -- diese Pause faengt das ab. Auch live im Programm unter Menuepunkt `a` einstellbar.
 
+**Settle-Pause vor der ersten Kontaktpruefung:** Direkt nach dem Umschalten eines Achsen-Signals wartet das Skript kurz (0,25s), bevor der Zielkontakt zum ersten Mal geprueft wird. Ohne diese Pause konnte der allererste Check noch einen veralteten Redstone-Wert von VOR dem Umschalten lesen und faelschlich "0 Schritte / Kontakt bereits erreicht" melden, obwohl die Achse noch gar nicht am Ziel war.
+
 ## Gesamtablauf: Reihenfolge und Parallelitaet
 
 Treppenmodul1 (Y, Z) und Boden (X, Z, A) laufen jeweils ueber einen einzigen Gearshift pro Richtung -- welche Achse gerade angetrieben wird, waehlen die Redstone-Ausgangs-Relais als Achsen-Selektor:
@@ -201,6 +203,7 @@ Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das 
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+
 
 
 
