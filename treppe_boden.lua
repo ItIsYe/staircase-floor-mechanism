@@ -393,14 +393,35 @@ end
 --   Z-Achse: relay_treppe1_z an
 -- Deshalb als 2 separate, nacheinander ausgefuehrte Schritte.
 
+-- Treppe1 Z gilt als bestaetigt "unten", wenn EINER der beiden Kontakte
+-- (je nach aktueller Y-Position) anschlaegt.
+local function treppe1ZUntenBestaetigt()
+    return relaisAn(relay_t1_z_unten) or relaisAn(relay_t1_z_unten_bei_y_eingefahren)
+end
+
+-- Vor JEDER Bewegung wird explizit geprueft, ob die Vorbedingung wirklich
+-- per Kontakt erfuellt ist -- nicht nur implizit durch die Aufrufreihenfolge
+-- angenommen. Ist das Fahrtziel bereits erreicht (zielRelay schon an),
+-- wird die Bewegung sicher uebersprungen (fahreBisKontakt macht das schon
+-- selbst durch die Kontaktpruefung vor dem ersten Schritt).
+
 local function treppe1Y(gearshift, richtung, zielRelay, beschreibung)
+    if not treppe1ZUntenBestaetigt() then
+        log("ABBRUCH: Treppe1 Y (" .. beschreibung .. ") -- Vorbedingung nicht erfuellt: Z ist nicht bestaetigt unten.")
+        return false
+    end
     relaisSetzen(relay_treppe1_z, false, "Treppe1-Z")
     return fahreBisKontakt(gearshift, richtung, zielRelay, "Treppe1 Y: " .. beschreibung)
 end
 
 -- zielRelay optional: nur beim Einfahren (Richtung "unten") vorhanden,
 -- da "oben" keinen eigenen Kontakt hat -- dort bleibt es bei fester Distanz.
-local function treppe1Z(gearshift, richtung, zielRelay, beschreibung)
+-- istAusfahren: true = Z faehrt hoch (Vorbedingung: Y muss ausgefahren sein)
+local function treppe1Z(gearshift, richtung, zielRelay, beschreibung, istAusfahren)
+    if istAusfahren and not relaisAn(relay_t1_y_ausgefahren) then
+        log("ABBRUCH: Treppe1 Z (" .. beschreibung .. ") -- Vorbedingung nicht erfuellt: Y ist nicht bestaetigt ausgefahren.")
+        return false
+    end
     relaisSetzen(relay_treppe1_z, true, "Treppe1-Z")
     local erfolg = true
     if zielRelay then
@@ -421,13 +442,13 @@ local function treppe1Ausfahren()
     if not treppe1Y(treppe1_aus, RICHTUNG_T1_Y_AUS, relay_t1_y_ausgefahren, "faehrt aus") then
         return false
     end
-    return treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch")  -- kein Kontakt fuer "oben"
+    return treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch", true)  -- kein Kontakt fuer "oben"
 end
 
 -- Treppe1 einfahren (Treppe -> Grundstellung): Z zuerst, dann Y
 -- (Y darf erst fahren, wenn Z bereits unten ist)
 local function treppe1Einfahren()
-    if not treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter") then
+    if not treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter", false) then
         return false
     end
     return treppe1Y(treppe1_ein, RICHTUNG_T1_Y_EIN, relay_t1_y_eingefahren, "faehrt ein")
@@ -454,7 +475,15 @@ local function bodenX(gearshift, richtung, zielRelay, beschreibung)
     return fahreBisKontakt(gearshift, richtung, zielRelay, "Boden X: " .. beschreibung)
 end
 
+-- Vorbedingung fuer Boden-Z (beide Richtungen, siehe README): X muss
+-- rechts sein. Gilt in unserer festen Reihenfolge fuer beide Aufrufe
+-- (Schritt 1 der Grundstellung->Treppe-Fahrt UND Schritt 5 der
+-- Treppe->Grundstellung-Fahrt), da X zu diesem Zeitpunkt jeweils rechts ist.
 local function bodenZ(gearshift, richtung, beschreibung)
+    if not relaisAn(relay_b_x_rechts) then
+        log("ABBRUCH: Boden Z (" .. beschreibung .. ") -- Vorbedingung nicht erfuellt: X ist nicht bestaetigt rechts.")
+        return false
+    end
     log("Boden Z: " .. beschreibung .. " ...")
     relaisSetzen(relay_boden_x, true, "Boden-X")
     gearshift.move(runtime.boden_z, richtung)
@@ -467,7 +496,16 @@ local function bodenZ(gearshift, richtung, beschreibung)
     return true
 end
 
+-- Vorbedingung fuer Boden-A: X muss links sein (per Kontakt pruefbar).
+-- Die zweite Teil-Vorbedingung "Z unten" laesst sich mangels eigenem,
+-- isoliertem Z-Kontakt bei Boden nicht unabhaengig verifizieren (nur ueber
+-- den kombinierten Z+A90-Kontakt, der zirkulaer waere) -- hier verlassen
+-- wir uns auf die feste Aufrufreihenfolge (bodenZ laeuft immer vor bodenA).
 local function bodenA(gearshift, richtung, beschreibung)
+    if not relaisAn(relay_b_x_links) then
+        log("ABBRUCH: Boden A (" .. beschreibung .. ") -- Vorbedingung nicht erfuellt: X ist nicht bestaetigt links.")
+        return false
+    end
     log("Boden A: " .. beschreibung .. " ...")
     relaisSetzen(relay_boden_x, true, "Boden-X")
     relaisSetzen(relay_boden_z, true, "Boden-Z")
@@ -508,7 +546,7 @@ local function treppeVerschwinden()
     log("=== Ablauf: Treppe -> Grundstellung ===")
 
     -- Schritt 1: Treppe1 Z faehrt runter
-    if not treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter") then
+    if not treppe1Z(treppe1_ein, RICHTUNG_T1_Z_EIN, relay_t1_z_unten, "faehrt runter", false) then
         log("ABBRUCH: Treppe1 Z (Schritt 1) fehlgeschlagen.")
         return false
     end
@@ -585,7 +623,7 @@ local function treppeHerstellen()
     end
 
     -- Schritt 4: Treppe1 Z faehrt hoch
-    if not treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch") then
+    if not treppe1Z(treppe1_aus, RICHTUNG_T1_Z_AUS, nil, "faehrt hoch", true) then
         log("ABBRUCH: Treppe1 Z (Schritt 4) fehlgeschlagen.")
         return false
     end
@@ -1156,6 +1194,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
