@@ -64,7 +64,8 @@ local function log(text)
             f2.close()
         end
         local f = fs.open(LOG_FILE, "a")
-        f.writeLine(os.date("%Y-%m-%d %H:%M:%S") .. "  " .. text)
+        local millisekunden = os.epoch("utc") % 1000
+        f.writeLine(os.date("%Y-%m-%d %H:%M:%S") .. "." .. string.format("%03d", millisekunden) .. "  " .. text)
         f.close()
     end)
 end
@@ -77,6 +78,7 @@ local runtime = {
     auto_schrittgroesse = cfg.auto_kalibrierung.schrittgroesse,
     auto_max_schritte   = cfg.auto_kalibrierung.max_schritte,
     sicherheitspause    = cfg.sicherheitspause_sekunden,
+    settle_pause        = cfg.settle_pause_sekunden,
 
     rpm_treppe1            = cfg.geschwindigkeiten.rpm.treppe1,
     rpm_treppe2_ausfahren   = cfg.geschwindigkeiten.rpm.treppe2_ausfahren,
@@ -335,7 +337,7 @@ end
 -- ============================================
 
 local function warteAufRelay(inputRelay, zielZustand)
-    sleep(0.25)  -- kurze Settle-Pause, damit Redstone sich propagieren kann
+    sleep(runtime.settle_pause)  -- kurze Settle-Pause, damit Redstone sich propagieren kann
     local start = os.clock()
     while relaisAn(inputRelay) ~= zielZustand do
         if os.clock() - start > TIMEOUT_S then
@@ -372,7 +374,7 @@ local function fahreBisKontakt(gearshift, richtung, zielRelay, beschreibung)
     -- propagieren kann, bevor der Kontakt geprueft wird -- sonst kann der
     -- allererste Check noch einen veralteten Wert von VOR dem Umschalten
     -- lesen und faelschlich "0 Schritte" melden.
-    sleep(0.25)
+    sleep(runtime.settle_pause)
     local schritte = 0
     while not relaisAn(zielRelay) and schritte < runtime.auto_max_schritte do
         gearshift.move(runtime.auto_schrittgroesse, richtung)
@@ -1130,6 +1132,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
