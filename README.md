@@ -190,7 +190,20 @@ Der Installer schreibt zusaetzlich eine `startup.lua`, die `treppe_boden.lua` be
 
 ## Fehlerbehandlung bei fehlgeschlagenen Schritten
 
-Jeder Achsen-Teilschritt (Auto-Kalibrierung wie feste Distanz) meldet zurueck, ob er wirklich erfolgreich war (Kontakt erreicht bzw. Bewegung abgeschlossen). Schlaegt ein Schritt fehl (z.B. Auto-Kalibrierung erreicht den Kontakt nicht innerhalb von `auto_max_schritte`), bricht der **gesamte** Ablauf sofort ab -- der Zustand wird NICHT gewechselt, und es folgen keine weiteren Schritte, die auf einer nicht erreichten Position aufbauen wuerden. Eine `ABBRUCH:`-Meldung zeigt, welcher Schritt gescheitert ist. Zur Fehlersuche danach Menuepunkt `k` (Kontakte-Status) nutzen.
+Jeder Achsen-Teilschritt (Auto-Kalibrierung wie feste Distanz) meldet zurueck, ob er wirklich erfolgreich war (Kontakt erreicht bzw. Bewegung abgeschlossen). Schlaegt ein Schritt fehl (z.B. Auto-Kalibrierung erreicht den Kontakt nicht innerhalb von `auto_max_schritte`), bricht der **gesamte** Ablauf sofort ab -- der Zustand wird NICHT gewechselt, und es folgen keine weiteren Schritte, die auf einer nicht erreichten Position aufbauen wuerden. Eine `ABBRUCH:`-Meldung zeigt, welcher Schritt gescheitert ist. Zur Fehlersuche danach Menuepunkt `k` (Kontakte-Status) oder `l` (Log) nutzen.
+
+## Explizite Vorbedingungspruefung vor jeder Bewegung
+
+Bevor eine Achse ueberhaupt startet, prueft der Code **per Kontakt**, ob die noetige Vorbedingung wirklich erfuellt ist -- nicht nur implizit durch die Aufrufreihenfolge angenommen:
+
+- **Treppe1 Y** faehrt nur, wenn Z per Kontakt als "unten" bestaetigt ist
+- **Treppe1 Z ausfahren** (hoch) faehrt nur, wenn Y per Kontakt als "ausgefahren" bestaetigt ist
+- **Boden Z** faehrt nur, wenn X per Kontakt als "rechts" bestaetigt ist
+- **Boden A** (Drehung) faehrt nur, wenn X per Kontakt als "links" bestaetigt ist
+
+Ist die Vorbedingung nicht erfuellt, wird die Bewegung mit einer `ABBRUCH:`-Meldung verweigert, statt blind loszufahren. Ist das Fahrziel eines Schritts bereits erreicht (Auto-Kalibrierung), wird die Bewegung automatisch uebersprungen -- `fahreBisKontakt` prueft das sicher per Kontakt, bevor der erste Fahrschritt ausgefuehrt wird.
+
+**Einschraenkung:** Fuer Boden-A's zweite Teil-Vorbedingung ("Z unten") existiert kein isolierter, unabhaengig pruefbarer Kontakt bei Boden (nur der kombinierte Z+A90-Kontakt, der zirkulaer waere) -- hier verlaesst sich der Code auf die feste Aufrufreihenfolge (Boden-Z laeuft immer vor Boden-A).
 
 ## Verriegelung
 
@@ -203,6 +216,7 @@ Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das 
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+
 
 
 
