@@ -99,7 +99,7 @@ Schrittgroesse und Sicherheitsabbruch (max. Schritte, falls der Kontakt nie komm
 
 **Sicherheitspause:** Nach jeder Kontakt-Bestaetigung (Auto-Kalibrierung oder finale Relay-Pruefung) wartet das Skript zusaetzlich `sicherheitspause_sekunden` (Standard 0,5s, in `config.lua`), bevor der naechste Schritt startet. Manche Kontakte schalten kurz bevor die Bewegung mechanisch wirklich ganz fertig ist -- diese Pause faengt das ab. Auch live im Programm unter Menuepunkt `a` einstellbar.
 
-**Settle-Pause vor der ersten Kontaktpruefung:** Direkt nach dem Umschalten eines Achsen-Signals wartet das Skript kurz (0,25s), bevor der Zielkontakt zum ersten Mal geprueft wird. Ohne diese Pause konnte der allererste Check noch einen veralteten Redstone-Wert von VOR dem Umschalten lesen und faelschlich "0 Schritte / Kontakt bereits erreicht" melden, obwohl die Achse noch gar nicht am Ziel war.
+**Settle-Pause vor der ersten Kontaktpruefung:** Direkt nach dem Umschalten eines Achsen-Signals wartet das Skript kurz (Standard 0,25s, `settle_pause_sekunden` in `config.lua`), bevor der Zielkontakt zum ersten Mal geprueft wird. Ohne diese Pause konnte der allererste Check noch einen veralteten Redstone-Wert von VOR dem Umschalten lesen und faelschlich "0 Schritte / Kontakt bereits erreicht" melden, obwohl die Achse noch gar nicht am Ziel war. Tritt das trotzdem noch auf, den Wert erhoehen (z.B. auf 1.0) -- tritt es auch dann noch auf, deutet das eher auf ein physisches Kontaktproblem als auf Timing hin.
 
 ## Gesamtablauf: Reihenfolge und Parallelitaet
 
@@ -140,7 +140,7 @@ Der Monitor aktualisiert sich automatisch bei Zustandsaenderungen (auch wenn die
 
 ## Log-Datei
 
-Jede Status-, Bewegungs-, Abbruch- und Sperr-Meldung landet zusaetzlich mit Zeitstempel in `treppe_log.txt` -- nichts geht mehr durch Wegscrollen oder ein zu schnell verschwindendes Terminal verloren. Auch jede Aenderung eines Ausgangs-Relais (Treppe1-Z, Boden-X, Boden-Z: AN/aus) wird protokolliert.
+Jede Status-, Bewegungs-, Abbruch- und Sperr-Meldung landet zusaetzlich mit Zeitstempel (Millisekunden-genau) in `treppe_log.txt` -- nichts geht mehr durch Wegscrollen oder ein zu schnell verschwindendes Terminal verloren. Auch jede Aenderung eines Ausgangs-Relais (Treppe1-Z, Boden-X, Boden-Z: AN/aus) wird protokolliert.
 
 - **Terminal:** Menuepunkt `l` -- oeffnet die Datei im eingebauten Editor (Scrollen/Suchen) oder leert sie
 - Die Datei waechst automatisch bis 100 KB, danach wird die aeltere Haelfte automatisch verworfen (kein unbegrenztes Wachstum)
@@ -216,6 +216,7 @@ Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das 
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+
 
 
 
