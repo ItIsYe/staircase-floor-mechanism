@@ -13,6 +13,7 @@ local REPO_BASE = "https://raw.githubusercontent.com/ItIsYe/staircase-floor-mech
 local DATEIEN = {
     "treppe_boden.lua",
     "config.lua",
+    "monitor_gui.lua",
 }
 
 local function herunterladenAlsText(dateiname)
@@ -85,3 +86,4 @@ else
     print("Bitte Internetverbindung/Netzwerkfreigabe pruefen und erneut versuchen.")
 end
 print("Erneutes Ausfuehren dieses Installers ersetzt ALLE Dateien wieder komplett.")
+
