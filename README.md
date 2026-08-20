@@ -10,9 +10,9 @@ Auf dem CC:Tweaked-Computer eingeben:
 wget run https://raw.githubusercontent.com/ItIsYe/staircase-floor-mechanism/main/installer.lua
 ```
 
-Laedt `treppe_boden.lua`, `config.lua` (nur beim ersten Mal / bei fehlenden Feldern) und `startup.lua`. Danach `config.lua` mit den echten Peripheral-Namen, Relay-Namen, Distanzen und der Spieler-Whitelist befuellen.
+Laedt `treppe_boden.lua`, `config.lua` und `startup.lua`. Danach `config.lua` mit den echten Peripheral-Namen, Relay-Namen, Distanzen und der Spieler-Whitelist befuellen -- und diese Werte auch im Repo committen (siehe unten).
 
-**Update:** denselben Befehl (oder `installer`, falls schon vorhanden) erneut ausfuehren. `treppe_boden.lua` und `startup.lua` werden neu geladen, `config.lua` wird migriert (neue Felder ergaenzt, eigene Werte bleiben erhalten).
+**Update:** denselben Befehl (oder `installer`, falls schon vorhanden) erneut ausfuehren. **Ersetzt ALLE Dateien vollstaendig** durch den aktuellen Repo-Stand -- keine Migration, kein Zusammenfuehren mit lokal geaenderten Werten. Eigene Kalibrierungswerte (Distanzen, Richtungen, Relay-Namen, Whitelist) muessen deshalb direkt im Repo (`config.lua`) gepflegt werden, damit sie bei einem Installer-Lauf nicht verloren gehen.
 
 ## Peripheral-Namen
 
@@ -216,6 +216,7 @@ Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das 
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+
 
 
 
