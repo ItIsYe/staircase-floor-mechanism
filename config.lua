@@ -51,8 +51,8 @@ return {
         -- Jede Achse braucht daher ihren eigenen Richtungsmodifier.
         boden_x_ausfahren = -1,
         boden_x_einfahren = 1,
-        boden_z_ausfahren = 1,
-        boden_z_einfahren = -1,
+        boden_z_ausfahren = -1,
+        boden_z_einfahren = 1,
         boden_a_ausfahren = 1,   -- Drehung zurueck (90 -> 0 Grad)
         boden_a_einfahren = -1,   -- Drehung (0 -> 90 Grad)
     },
