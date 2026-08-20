@@ -176,7 +176,7 @@ Fahrgeschwindigkeit ist per Create-`Rotation Speed Controller` steuerbar, RPM-Be
 
 ## Initialisierung
 
-Beim Programmstart wird der aktuelle Zustand ueber die Relay-Kontakte ermittelt. Ist der Zustand nicht eindeutig bestimmbar, faehrt das Programm einmalig automatisch in die Grundstellung (Treppe sichtbar).
+Beim Programmstart wird der aktuelle Zustand ueber die Relay-Kontakte ermittelt. Ist der Zustand nicht eindeutig bestimmbar, faehrt das Programm automatisch in einen bekannten Zustand: zuerst wird Boden-X explizit auf "rechts" gebracht (X hat keine Vorbedingung, funktioniert daher sicher aus jeder Ausgangsposition), erst danach startet der normale Ablauf zur Treppe. Das ist noetig, weil Boden-Z's Vorbedingung ("X rechts") bei unbekanntem Zustand sonst nie sicher erfuellt waere und der Ablauf sofort abbrechen wuerde.
 
 ## Startup
 
@@ -216,6 +216,7 @@ Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das 
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+
 
 
 
