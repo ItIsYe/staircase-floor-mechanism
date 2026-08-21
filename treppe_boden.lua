@@ -236,17 +236,7 @@ local relay_boden_eingefahren_bestaetigt = {
     end
 }
 
-local playerDetector = peripheral.wrap(cfg.player_detector_name)
-if not playerDetector then
-    -- Fallback: Typ-Suche, falls der Name in config.lua nicht (mehr) stimmt
-    playerDetector = peripheral.find("player_detector") or peripheral.find("playerDetector")
-end
-if not playerDetector then
-    log("WARNUNG: Player Detector ('" .. tostring(cfg.player_detector_name) .. "') nicht gefunden. Geofence-Erkennung bleibt inaktiv.")
-    for _, name in ipairs(peripheral.getNames()) do
-        log("  Peripheral: " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
-    end
-end
+local playerDetector = peripheral.find("playerDetector")
 local monitor = peripheral.find("monitor")
 if monitor then
     monitor.setTextScale(0.5)
@@ -346,19 +336,11 @@ end
 -- Hilfsfunktionen
 -- ============================================
 
--- Echte Wanduhrzeit in Sekunden (os.clock() misst in CC:Tweaked KEINE
--- verlaessliche Realzeit waehrend sleep()-lastiger Schleifen -- das fuehrte
--- dazu, dass unser "15-Sekunden"-Timeout in Wirklichkeit weit ueber eine
--- Minute real dauern konnte, bevor er auffiel).
-local function jetztSekunden()
-    return os.epoch("utc") / 1000
-end
-
 local function warteAufRelay(inputRelay, zielZustand)
     sleep(runtime.settle_pause)  -- kurze Settle-Pause, damit Redstone sich propagieren kann
-    local start = jetztSekunden()
+    local start = os.clock()
     while relaisAn(inputRelay) ~= zielZustand do
-        if jetztSekunden() - start > TIMEOUT_S then
+        if os.clock() - start > TIMEOUT_S then
             return false
         end
         sleep(0.25)
@@ -374,9 +356,9 @@ end
 -- die Fehlersuche, da laengere Wartezeiten sonst unsichtbar bleiben.
 local function warteAufBestaetigung(inputRelay, beschreibung)
     log("Warte auf Bestaetigung: " .. beschreibung .. " ...")
-    local start = jetztSekunden()
+    local start = os.clock()
     local erfolg = warteAufRelay(inputRelay, true)
-    local dauer = jetztSekunden() - start
+    local dauer = os.clock() - start
     if erfolg then
         log("Bestaetigt: " .. beschreibung .. " (nach " .. string.format("%.1f", dauer) .. "s)")
     else
@@ -388,9 +370,9 @@ end
 -- Wartet, bis der Gearshift seine aktuelle Bewegung beendet hat (Polling
 -- ueber isRunning(), da es fuer Zwischenschritte keine Relay-Kontakte gibt).
 local function wartenBisFertig(gearshift)
-    local start = jetztSekunden()
+    local start = os.clock()
     while gearshift.isRunning() do
-        if jetztSekunden() - start > TIMEOUT_S then
+        if os.clock() - start > TIMEOUT_S then
             return false
         end
         sleep(0.25)
@@ -1214,8 +1196,6 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
-
-
 
 
 
