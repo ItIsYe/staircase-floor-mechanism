@@ -2,10 +2,17 @@
 -- Installer / Updater fuer Treppen-/Boden-Mechanismus
 --
 -- Ersetzt bei JEDEM Lauf ALLE Dateien vollstaendig durch den aktuellen
--- Stand aus dem Repo (treppe_boden.lua, config.lua, startup.lua) --
--- keine Migration, kein Zusammenfuehren. Eigene Kalibrierungswerte
--- (Distanzen, Richtungen, Relay-Namen usw.) muessen daher direkt im
--- Repo (config.lua) gepflegt werden, nicht nur lokal auf dem Computer.
+-- Stand aus dem Repo (treppe_boden.lua, config.lua, monitor_gui.lua,
+-- startup.lua) -- keine Migration, kein Zusammenfuehren. Eigene
+-- Kalibrierungswerte (Distanzen, Richtungen, Relay-Namen usw.) muessen
+-- daher direkt im Repo (config.lua) gepflegt werden, nicht nur lokal
+-- auf dem Computer.
+--
+-- Zusaetzlich wird treppe_runtime.cfg (die lokale Laufzeit-Speicherdatei
+-- fuer live ueber die Menues geaenderte Werte) geloescht -- sonst wuerden
+-- darin gespeicherte alte Werte weiterhin die neuen config.lua-Werte
+-- ueberschreiben, ohne dass das sichtbar waere. config.lua ist damit
+-- immer die alleinige Quelle der Wahrheit nach einem Installer-Lauf.
 -- ============================================
 
 local REPO_BASE = "https://raw.githubusercontent.com/ItIsYe/staircase-floor-mechanism/main/"
@@ -15,6 +22,8 @@ local DATEIEN = {
     "config.lua",
     "monitor_gui.lua",
 }
+
+local RUNTIME_FILE = "treppe_runtime.cfg"
 
 local function herunterladenAlsText(dateiname)
     local url = REPO_BASE .. dateiname
@@ -49,6 +58,13 @@ for _, dateiname in ipairs(DATEIEN) do
         print("FEHLGESCHLAGEN")
         alleOk = false
     end
+end
+
+-- treppe_runtime.cfg loeschen, damit config.lua wieder alleinig gilt
+-- (siehe Kommentar oben). Kein Fehler, falls die Datei nicht existiert.
+if fs.exists(RUNTIME_FILE) then
+    fs.delete(RUNTIME_FILE)
+    print("treppe_runtime.cfg geloescht (config.lua ist wieder alleinige Quelle).")
 end
 
 -- startup.lua: startet treppe_boden.lua automatisch bei jedem PC-Boot.
@@ -86,4 +102,5 @@ else
     print("Bitte Internetverbindung/Netzwerkfreigabe pruefen und erneut versuchen.")
 end
 print("Erneutes Ausfuehren dieses Installers ersetzt ALLE Dateien wieder komplett.")
+
 
