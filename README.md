@@ -12,7 +12,7 @@ wget run https://raw.githubusercontent.com/ItIsYe/staircase-floor-mechanism/main
 
 Laedt `treppe_boden.lua`, `config.lua` und `startup.lua`. Danach `config.lua` mit den echten Peripheral-Namen, Relay-Namen, Distanzen und der Spieler-Whitelist befuellen -- und diese Werte auch im Repo committen (siehe unten).
 
-**Update:** denselben Befehl (oder `installer`, falls schon vorhanden) erneut ausfuehren. **Ersetzt ALLE Dateien vollstaendig** durch den aktuellen Repo-Stand -- keine Migration, kein Zusammenfuehren mit lokal geaenderten Werten. Eigene Kalibrierungswerte (Distanzen, Richtungen, Relay-Namen, Whitelist) muessen deshalb direkt im Repo (`config.lua`) gepflegt werden, damit sie bei einem Installer-Lauf nicht verloren gehen.
+**Update:** denselben Befehl (oder `installer`, falls schon vorhanden) erneut ausfuehren. **Ersetzt ALLE Dateien vollstaendig** durch den aktuellen Repo-Stand -- keine Migration, kein Zusammenfuehren mit lokal geaenderten Werten. Eigene Kalibrierungswerte (Distanzen, Richtungen, Relay-Namen, Whitelist) muessen deshalb direkt im Repo (`config.lua`) gepflegt werden, damit sie bei einem Installer-Lauf nicht verloren gehen. Der Installer loescht dabei zusaetzlich `treppe_runtime.cfg` (lokal gespeicherte, live ueber die Menues geaenderte Werte) -- sonst wuerden darin gespeicherte alte Werte weiterhin neue `config.lua`-Werte ueberschreiben, ohne dass das erkennbar waere. Nach jedem Installer-Lauf ist `config.lua` also wieder die alleinige Quelle der Wahrheit.
 
 ## Peripheral-Namen
 
@@ -220,6 +220,7 @@ Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das 
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+
 
 
 
