@@ -753,28 +753,53 @@ local function playerSensorAktiv()
     return runtime.player_sensor_aktiv ~= false
 end
 
-local function erlaubterSpielerImBereich()
-    if not playerSensorAktiv() then return false end
-    if not playerDetector then return false end
+-- Gibt zurueck: (im Bereich?, Name des erkannten Whitelist-Spielers oder nil)
+local function erlaubterSpielerImBereichMitName()
+    if not playerSensorAktiv() then return false, nil end
+    if not playerDetector then return false, nil end
     for _, name in ipairs(ERLAUBTE_SPIELER) do
         if playerDetector.isPlayerInRange(PLAYER_RANGE, name) then
-            return true
+            return true, name
         end
     end
-    return false
+    return false, nil
+end
+
+local function erlaubterSpielerImBereich()
+    local imBereich = erlaubterSpielerImBereichMitName()
+    return imBereich
 end
 
 local function geofenceUeberwachung()
+    local letzterZustand = nil  -- nil = noch nichts geloggt, "im_bereich" / "nicht_im_bereich"
+    local letzterSpielerName = nil
+
     while true do
         if redstone.getInput(RS_TRIGGER_SIDE) then
             -- Redstone hat Vorrang
         elseif not playerSensorAktiv() then
             -- Player-Sensor bewusst deaktiviert: Geofence greift gar nicht ein.
             -- Insbesondere wird "Sensor AUS" NICHT als "kein Spieler" gewertet.
-        elseif erlaubterSpielerImBereich() then
-            zielzustandErzwingen("treppe")
         else
-            zielzustandErzwingen("boden")
+            local imBereich, spielerName = erlaubterSpielerImBereichMitName()
+
+            -- Nur bei einer Aenderung loggen, nicht bei jedem 0,5s-Tick.
+            local aktuellerZustand = imBereich and "im_bereich" or "nicht_im_bereich"
+            if aktuellerZustand ~= letzterZustand or spielerName ~= letzterSpielerName then
+                if imBereich then
+                    log("Spieler-Erkennung: '" .. spielerName .. "' im Bereich -> Treppe wird angefordert")
+                else
+                    log("Spieler-Erkennung: kein Whitelist-Spieler im Bereich -> Boden wird angefordert")
+                end
+                letzterZustand = aktuellerZustand
+                letzterSpielerName = spielerName
+            end
+
+            if imBereich then
+                zielzustandErzwingen("treppe")
+            else
+                zielzustandErzwingen("boden")
+            end
         end
         sleep(0.5)
     end
@@ -1171,6 +1196,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
