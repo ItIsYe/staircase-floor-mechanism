@@ -14,7 +14,7 @@
 
 return {
 
-    config_version = 25,
+    config_version = 24,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -25,9 +25,6 @@ return {
         boden_ausfahren   = "Create_SequencedGearshift_6",
         boden_einfahren   = "Create_SequencedGearshift_5",
     },
-
-    -- Exakter Peripheral-Name des Player Detectors (Advanced Peripherals)
-    player_detector_name = "player_detector_0",
 
     -- Richtungsmodifier je Gearshift: 1 oder -1. Falls ein Gearshift beim
     -- Ausfahren tatsaechlich einfaehrt (oder umgekehrt), hier NUR das
