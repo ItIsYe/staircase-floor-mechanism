@@ -130,7 +130,7 @@ return {
 
     -- Zugriffskontrolle Player Detector (Advanced Peripherals) -- UNVERAENDERT
     spieler = {
-        reichweite = 5,
+        reichweite = 15,
         erlaubte_spieler = {
             "NXRxKing",
             "timdax",
