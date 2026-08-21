@@ -188,6 +188,10 @@ Der Installer schreibt zusaetzlich eine `startup.lua`, die `treppe_boden.lua` be
 - **Geofence / Player Detector**: solange mindestens ein Whitelist-Spieler (`spieler.erlaubte_spieler` in `config.lua`) im konfigurierten Bereich ist, wird die Treppe erzwungen; verlassen alle Whitelist-Spieler den Bereich, wird der Boden erzwungen
 - **Manuell** ueber die UI (Menuepunkte 4/5/6 fuer einzelne Module, 9 fuer den kompletten Toggle-Ablauf)
 
+## Wichtiger Timing-Fix: echte Wanduhrzeit statt os.clock()
+
+Alle Timeouts (`warteAufRelay`, `wartenBisFertig`) nutzten urspruenglich `os.clock()` zur Zeitmessung. In CC:Tweaked misst `os.clock()` waehrend `sleep()`-lastiger Warteschleifen aber **keine** verlaessliche Realzeit -- ein konfigurierter 15-Sekunden-Timeout (`timeout_sekunden`) konnte dadurch in Wirklichkeit weit ueber eine Minute REAL dauern, bevor er tatsaechlich griff (im Log stand dann faelschlich "nach 15.5s", obwohl real ueber 90 Sekunden vergangen waren). Alle Zeitmessungen laufen jetzt ueber `os.epoch("utc")` (echte Wanduhrzeit in Millisekunden) -- die geloggten Zeiten stimmen dadurch jetzt mit der tatsaechlich vergangenen Zeit ueberein.
+
 ## Fehlerbehandlung bei fehlgeschlagenen Schritten
 
 Jeder Achsen-Teilschritt (Auto-Kalibrierung wie feste Distanz) meldet zurueck, ob er wirklich erfolgreich war (Kontakt erreicht bzw. Bewegung abgeschlossen). Schlaegt ein Schritt fehl (z.B. Auto-Kalibrierung erreicht den Kontakt nicht innerhalb von `auto_max_schritte`), bricht der **gesamte** Ablauf sofort ab -- der Zustand wird NICHT gewechselt, und es folgen keine weiteren Schritte, die auf einer nicht erreichten Position aufbauen wuerden. Eine `ABBRUCH:`-Meldung zeigt, welcher Schritt gescheitert ist. Zur Fehlersuche danach Menuepunkt `k` (Kontakte-Status) oder `l` (Log) nutzen.
@@ -216,6 +220,7 @@ Bevor eine neue Bewegung startet, prueft das Programm per Relay-Kontakt, ob das 
 ## Status
 
 Positions-/Kontaktarchitektur wurde komplett neu definiert und mit finaler Relay-Zuordnung umgesetzt. Noch keine vollstaendigen In-Game-Tests durchgefuehrt.
+
 
 
 
