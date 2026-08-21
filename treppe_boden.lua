@@ -351,6 +351,22 @@ local function warteAufRelay(inputRelay, zielZustand)
     return true
 end
 
+-- Wartet auf eine Abschlussbestaetigung MIT Logging, welcher Kontakt
+-- geprueft wird und ob/wann er (nicht) bestaetigt wurde -- wichtig fuer
+-- die Fehlersuche, da laengere Wartezeiten sonst unsichtbar bleiben.
+local function warteAufBestaetigung(inputRelay, beschreibung)
+    log("Warte auf Bestaetigung: " .. beschreibung .. " ...")
+    local start = os.clock()
+    local erfolg = warteAufRelay(inputRelay, true)
+    local dauer = os.clock() - start
+    if erfolg then
+        log("Bestaetigt: " .. beschreibung .. " (nach " .. string.format("%.1f", dauer) .. "s)")
+    else
+        log("TIMEOUT: " .. beschreibung .. " nicht bestaetigt nach " .. string.format("%.1f", dauer) .. "s")
+    end
+    return erfolg
+end
+
 -- Wartet, bis der Gearshift seine aktuelle Bewegung beendet hat (Polling
 -- ueber isRunning(), da es fuer Zwischenschritte keine Relay-Kontakte gibt).
 local function wartenBisFertig(gearshift)
@@ -586,9 +602,15 @@ local function treppeVerschwinden()
         return false
     end
 
-    if not warteAufRelay(relay_t1_grund_bestaetigt, true)
-        or not warteAufRelay(relay_t2_y_eingefahren, true)
-        or not warteAufRelay(relay_boden_ausgefahren_bestaetigt, true) then
+    if not warteAufBestaetigung(relay_t1_grund_bestaetigt, "Treppe1 Grundstellung") then
+        log("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
+        return false
+    end
+    if not warteAufBestaetigung(relay_t2_y_eingefahren, "Treppe2 eingefahren") then
+        log("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
+        return false
+    end
+    if not warteAufBestaetigung(relay_boden_ausgefahren_bestaetigt, "Boden ausgefahren") then
         log("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
         return false
     end
@@ -634,9 +656,15 @@ local function treppeHerstellen()
         return false
     end
 
-    if not warteAufRelay(relay_t1_treppe_bestaetigt, true)
-        or not warteAufRelay(relay_t2_y_ausgefahren, true)
-        or not warteAufRelay(relay_boden_eingefahren_bestaetigt, true) then
+    if not warteAufBestaetigung(relay_t1_treppe_bestaetigt, "Treppe1 ausgefahren") then
+        log("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
+        return false
+    end
+    if not warteAufBestaetigung(relay_t2_y_ausgefahren, "Treppe2 ausgefahren") then
+        log("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
+        return false
+    end
+    if not warteAufBestaetigung(relay_boden_eingefahren_bestaetigt, "Boden eingefahren") then
         log("ABBRUCH: Abschlussbestaetigung fehlgeschlagen (Timeout).")
         return false
     end
@@ -1143,6 +1171,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
