@@ -222,9 +222,20 @@ local relay_b_z_oben_a0   = findRelay(cfg.redstone_relais.eingaenge.boden_z_oben
 -- Boden "Grundstellung" (X rechts + Z oben + A 0Grad) bedeutet: Boden ist
 -- AUSGEFAHREN/sichtbar -- das gehoert zum Gesamtzustand "boden" (Treppe
 -- NICHT sichtbar), nicht zu "treppe".
+-- WICHTIG: die beiden Teil-Relais werden UNABHAENGIG voneinander ueber
+-- alle 6 Seiten geprueft (nicht dieselbe Seite fuer beide) -- sonst kann
+-- die Kombination nie bestaetigt werden, falls beide Relais ihr Signal
+-- an unterschiedlichen physischen Seiten tragen.
+local ALLE_SEITEN_LOKAL = { "top", "bottom", "left", "right", "front", "back" }
+local function seiteAn(relay)
+    for _, s in ipairs(ALLE_SEITEN_LOKAL) do
+        if relay.getInput(s) then return true end
+    end
+    return false
+end
 local relay_boden_ausgefahren_bestaetigt = {
     getInput = function(side)
-        return relay_b_x_rechts.getInput(side) and relay_b_z_oben_a0.getInput(side)
+        return seiteAn(relay_b_x_rechts) and seiteAn(relay_b_z_oben_a0)
     end
 }
 
@@ -1204,6 +1215,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
