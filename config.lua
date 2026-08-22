@@ -14,7 +14,7 @@
 
 return {
 
-    config_version = 24,
+    config_version = 26,
 
     -- Exakte Peripheral-Namen der Sequenced Gearshifts
     peripherals = {
@@ -138,7 +138,10 @@ return {
     },
 
     -- Sonstiges
-    timeout_sekunden = 15,
+    -- Timeout fuer Bewegungen (isRunning-Polling) und Kontakt-Bestaetigungen.
+    -- Muss laenger sein als die laengste tatsaechliche Bewegung -- Boden Z
+    -- (5 Bloecke bei RPM 16) dauert real ca. 45s. 90s laesst deutlich Puffer.
+    timeout_sekunden = 90,
 
     -- Auto-Kalibrierung: fuer Achsen mit Kontakt an BEIDEN Endpunkten
     -- (Treppe1-Y, Treppe2-Y, Boden-X, Treppe1-Z nur Richtung "unten")
@@ -164,6 +167,7 @@ return {
     settle_pause_sekunden = 0.25,
 
 }
+
 
 
 
