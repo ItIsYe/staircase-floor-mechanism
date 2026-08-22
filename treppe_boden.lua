@@ -336,11 +336,19 @@ end
 -- Hilfsfunktionen
 -- ============================================
 
+-- Echte Wanduhrzeit in Sekunden (os.clock() misst in CC:Tweaked KEINE
+-- verlaessliche Realzeit waehrend sleep()-lastiger Schleifen -- ein
+-- konfigurierter Timeout von z.B. 15s konnte dadurch real deutlich
+-- laenger dauern, bevor er tatsaechlich griff).
+local function jetztSekunden()
+    return os.epoch("utc") / 1000
+end
+
 local function warteAufRelay(inputRelay, zielZustand)
     sleep(runtime.settle_pause)  -- kurze Settle-Pause, damit Redstone sich propagieren kann
-    local start = os.clock()
+    local start = jetztSekunden()
     while relaisAn(inputRelay) ~= zielZustand do
-        if os.clock() - start > TIMEOUT_S then
+        if jetztSekunden() - start > TIMEOUT_S then
             return false
         end
         sleep(0.25)
@@ -356,9 +364,9 @@ end
 -- die Fehlersuche, da laengere Wartezeiten sonst unsichtbar bleiben.
 local function warteAufBestaetigung(inputRelay, beschreibung)
     log("Warte auf Bestaetigung: " .. beschreibung .. " ...")
-    local start = os.clock()
+    local start = jetztSekunden()
     local erfolg = warteAufRelay(inputRelay, true)
-    local dauer = os.clock() - start
+    local dauer = jetztSekunden() - start
     if erfolg then
         log("Bestaetigt: " .. beschreibung .. " (nach " .. string.format("%.1f", dauer) .. "s)")
     else
@@ -370,9 +378,9 @@ end
 -- Wartet, bis der Gearshift seine aktuelle Bewegung beendet hat (Polling
 -- ueber isRunning(), da es fuer Zwischenschritte keine Relay-Kontakte gibt).
 local function wartenBisFertig(gearshift)
-    local start = os.clock()
+    local start = jetztSekunden()
     while gearshift.isRunning() do
-        if os.clock() - start > TIMEOUT_S then
+        if jetztSekunden() - start > TIMEOUT_S then
             return false
         end
         sleep(0.25)
@@ -1196,6 +1204,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
