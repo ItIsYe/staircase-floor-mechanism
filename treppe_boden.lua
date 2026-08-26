@@ -247,7 +247,17 @@ local relay_boden_eingefahren_bestaetigt = {
     end
 }
 
-local playerDetector = peripheral.find("playerDetector")
+local playerDetector = peripheral.wrap(cfg.player_detector_name or "player_detector_0")
+if not playerDetector then
+    -- Fallback: Typ-Suche, falls der Name nicht (mehr) stimmt
+    playerDetector = peripheral.find("player_detector") or peripheral.find("playerDetector")
+end
+if not playerDetector then
+    log("WARNUNG: Player Detector nicht gefunden. Geofence-Erkennung bleibt inaktiv.")
+    for _, name in ipairs(peripheral.getNames()) do
+        log("  Peripheral: " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
+    end
+end
 local monitor = peripheral.find("monitor")
 if monitor then
     monitor.setTextScale(0.5)
@@ -1215,6 +1225,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
