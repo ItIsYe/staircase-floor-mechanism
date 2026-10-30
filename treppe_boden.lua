@@ -779,6 +779,18 @@ local function zustandInitialisieren()
         relaisSetzen(relay_boden_z, false, "Boden-Z")
         relaisSetzen(relay_boden_x, false, "Boden-X")
 
+        -- Steht Boden nachweislich eingefahren (X links + Z unten + A 90),
+        -- muss A ZUERST zurueck auf 0 Grad, bevor X nach rechts fahren darf
+        -- (Regel: Drehung vor X, wenn X nach rechts faehrt). Ohne diesen
+        -- Schritt faehrt X mit noch gedrehtem Boden nach rechts.
+        if seiteAn(relay_b_x_links) and seiteAn(relay_b_z_unten_a90) then
+            log("Initialisierung: Boden steht eingefahren (A 90 Grad) -- drehe zuerst A zurueck auf 0 Grad.")
+            if not bodenA(boden_aus, RICHTUNG_B_A_AUS, "Initialisierung: A auf 0 Grad") then
+                log("WARNUNG: Initialisierung fehlgeschlagen -- Boden-A konnte nicht zurueckgedreht werden. Bitte Kontakte pruefen (Menuepunkt k) und Zustand manuell klaeren.")
+                return
+            end
+        end
+
         -- Boden-Z's Vorbedingung ("X rechts") kann bei unbekanntem Zustand
         -- NICHT einfach angenommen werden -- deshalb wird X hier zuerst
         -- explizit auf "rechts" gefahren. bodenX hat selbst KEINE
@@ -1288,6 +1300,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
