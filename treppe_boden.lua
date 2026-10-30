@@ -202,10 +202,20 @@ local relay_t1_z_unten_bei_y_eingefahren = findRelay(cfg.redstone_relais.eingaen
 -- UND Z-unten-bei-Y-eingefahren zusammen (relay_t1_z_unten waere hier
 -- nicht lesbar, da er nur waehrend Y ausgefahren funktioniert -- siehe
 -- Kommentar oben).
+-- Seitenunabhaengige Pruefung: jedes Teil-Relay wird fuer sich ueber alle 6
+-- Seiten geprueft (nicht beide mit derselben Seite).
+local ALLE_SEITEN_LOKAL = { "top", "bottom", "left", "right", "front", "back" }
+local function seiteAn(relay)
+    for _, s in ipairs(ALLE_SEITEN_LOKAL) do
+        if relay.getInput(s) then return true end
+    end
+    return false
+end
+
 local relay_t1_treppe_bestaetigt = relay_t1_y_ausgefahren
 local relay_t1_grund_bestaetigt = {
     getInput = function(side)
-        return relay_t1_y_eingefahren.getInput(side) and relay_t1_z_unten_bei_y_eingefahren.getInput(side)
+        return seiteAn(relay_t1_y_eingefahren) and seiteAn(relay_t1_z_unten_bei_y_eingefahren)
     end
 }
 
@@ -226,13 +236,6 @@ local relay_b_z_oben_a0   = findRelay(cfg.redstone_relais.eingaenge.boden_z_oben
 -- alle 6 Seiten geprueft (nicht dieselbe Seite fuer beide) -- sonst kann
 -- die Kombination nie bestaetigt werden, falls beide Relais ihr Signal
 -- an unterschiedlichen physischen Seiten tragen.
-local ALLE_SEITEN_LOKAL = { "top", "bottom", "left", "right", "front", "back" }
-local function seiteAn(relay)
-    for _, s in ipairs(ALLE_SEITEN_LOKAL) do
-        if relay.getInput(s) then return true end
-    end
-    return false
-end
 local relay_boden_ausgefahren_bestaetigt = {
     getInput = function(side)
         return seiteAn(relay_b_x_rechts) and seiteAn(relay_b_z_oben_a0)
@@ -243,7 +246,7 @@ local relay_boden_ausgefahren_bestaetigt = {
 -- zurueckgezogen -- das gehoert zum Gesamtzustand "treppe" (Treppe sichtbar).
 local relay_boden_eingefahren_bestaetigt = {
     getInput = function(side)
-        return relay_b_x_links.getInput(side) and relay_b_z_unten_a90.getInput(side)
+        return seiteAn(relay_b_x_links) and seiteAn(relay_b_z_unten_a90)
     end
 }
 
@@ -423,7 +426,10 @@ local function fahreBisKontakt(gearshift, richtung, zielRelay, beschreibung)
     local schritte = 0
     while not relaisAn(zielRelay) and schritte < runtime.auto_max_schritte do
         gearshift.move(runtime.auto_schrittgroesse, richtung)
-        wartenBisFertig(gearshift)
+        if not wartenBisFertig(gearshift) then
+            log("WARNUNG: " .. beschreibung .. " -- Gearshift meldet nach Timeout weiter 'laeuft'. Abbruch.")
+            return false
+        end
         schritte = schritte + 1
     end
     if relaisAn(zielRelay) then
@@ -480,8 +486,12 @@ local function treppe1Z(gearshift, richtung, zielRelay, beschreibung, istAusfahr
     else
         log("Treppe1 Z: " .. beschreibung .. " ...")
         gearshift.move(runtime.treppe1_z, richtung)
-        wartenBisFertig(gearshift)
-        log("Treppe1 Z: " .. beschreibung .. " fertig.")
+        erfolg = wartenBisFertig(gearshift)
+        if erfolg then
+            log("Treppe1 Z: " .. beschreibung .. " fertig.")
+        else
+            log("WARNUNG: Treppe1 Z (" .. beschreibung .. ") -- Gearshift meldet nach Timeout weiter 'laeuft'.")
+        end
     end
     relaisSetzen(relay_treppe1_z, false, "Treppe1-Z")
     return erfolg
@@ -538,8 +548,12 @@ local function bodenZ(gearshift, richtung, beschreibung)
     log("Boden Z: " .. beschreibung .. " ...")
     relaisSetzen(relay_boden_x, true, "Boden-X")
     gearshift.move(runtime.boden_z, richtung)
-    wartenBisFertig(gearshift)
+    local fertig = wartenBisFertig(gearshift)
     relaisSetzen(relay_boden_x, false, "Boden-X")
+    if not fertig then
+        log("WARNUNG: Boden Z (" .. beschreibung .. ") -- Gearshift meldet nach Timeout weiter 'laeuft'.")
+        return false
+    end
     log("Boden Z: " .. beschreibung .. " fertig.")
     if runtime.sicherheitspause > 0 then
         sleep(runtime.sicherheitspause)
@@ -561,9 +575,13 @@ local function bodenA(gearshift, richtung, beschreibung)
     relaisSetzen(relay_boden_x, true, "Boden-X")
     relaisSetzen(relay_boden_z, true, "Boden-Z")
     gearshift.rotate(runtime.boden_a, richtung)
-    wartenBisFertig(gearshift)
+    local fertig = wartenBisFertig(gearshift)
     relaisSetzen(relay_boden_x, false, "Boden-X")
     relaisSetzen(relay_boden_z, false, "Boden-Z")
+    if not fertig then
+        log("WARNUNG: Boden A (" .. beschreibung .. ") -- Gearshift meldet nach Timeout weiter 'laeuft'.")
+        return false
+    end
     log("Boden A: " .. beschreibung .. " fertig.")
     if runtime.sicherheitspause > 0 then
         sleep(runtime.sicherheitspause)
@@ -783,14 +801,26 @@ local function playerSensorAktiv()
 end
 
 -- Gibt zurueck: (im Bereich?, Name des erkannten Whitelist-Spielers oder nil)
+local letzterDetektorFehler = nil
 local function erlaubterSpielerImBereichMitName()
     if not playerSensorAktiv() then return false, nil end
     if not playerDetector then return false, nil end
     for _, name in ipairs(ERLAUBTE_SPIELER) do
-        if playerDetector.isPlayerInRange(PLAYER_RANGE, name) then
+        local ok, treffer = pcall(playerDetector.isPlayerInRange, PLAYER_RANGE, name)
+        if not ok then
+            -- Fehler nur beim Wechsel loggen, nicht alle 0,5s
+            if letzterDetektorFehler ~= tostring(treffer) then
+                letzterDetektorFehler = tostring(treffer)
+                log("FEHLER Player Detector: " .. letzterDetektorFehler)
+            end
+            return false, nil
+        end
+        if treffer then
+            letzterDetektorFehler = nil
             return true, name
         end
     end
+    letzterDetektorFehler = nil
     return false, nil
 end
 
@@ -1225,6 +1255,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
