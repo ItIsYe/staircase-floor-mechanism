@@ -261,6 +261,9 @@ if not playerDetector then
         log("  Peripheral: " .. name .. " (" .. tostring(peripheral.getType(name)) .. ")")
     end
 end
+if playerDetector then
+    log("Player Detector gefunden (Reichweite " .. tostring(cfg.spieler.reichweite) .. ", Whitelist: " .. table.concat(cfg.spieler.erlaubte_spieler, ", ") .. ")")
+end
 local monitor = peripheral.find("monitor")
 if monitor then
     monitor.setTextScale(0.5)
@@ -829,14 +832,43 @@ local function erlaubterSpielerImBereich()
     return imBereich
 end
 
+-- Nur fuer die Diagnose im Log: alle Spieler, die der Detector in Reichweite sieht
+local function spielerInReichweiteText()
+    if not playerDetector then return "(kein Detector)" end
+    local ok, liste = pcall(playerDetector.getPlayersInRange, PLAYER_RANGE)
+    if not ok then return "(Abfrage fehlgeschlagen: " .. tostring(liste) .. ")" end
+    if type(liste) ~= "table" or #liste == 0 then return "niemand" end
+    local namen = {}
+    for _, n in ipairs(liste) do namen[#namen + 1] = tostring(n) end
+    return table.concat(namen, ", ")
+end
+
 local function geofenceUeberwachung()
     local letzterZustand = nil  -- nil = noch nichts geloggt, "im_bereich" / "nicht_im_bereich"
     local letzterSpielerName = nil
+    local letzterBlock = nil    -- nil / "redstone" / "sensor_aus" (nur fuer Logging)
 
     while true do
+        local block = nil
         if redstone.getInput(RS_TRIGGER_SIDE) then
-            -- Redstone hat Vorrang
+            block = "redstone"
         elseif not playerSensorAktiv() then
+            block = "sensor_aus"
+        end
+        if block ~= letzterBlock then
+            if block == "redstone" then
+                log("Geofence pausiert: Redstone-Trigger-Eingang (Seite '" .. tostring(RS_TRIGGER_SIDE) .. "') ist AN")
+            elseif block == "sensor_aus" then
+                log("Geofence pausiert: Player-Sensor ist deaktiviert")
+            elseif letzterBlock then
+                log("Geofence wieder aktiv")
+            end
+            letzterBlock = block
+        end
+
+        if block == "redstone" then
+            -- Redstone hat Vorrang
+        elseif block == "sensor_aus" then
             -- Player-Sensor bewusst deaktiviert: Geofence greift gar nicht ein.
             -- Insbesondere wird "Sensor AUS" NICHT als "kein Spieler" gewertet.
         else
@@ -850,6 +882,7 @@ local function geofenceUeberwachung()
                 else
                     log("Spieler-Erkennung: kein Whitelist-Spieler im Bereich -> Boden wird angefordert")
                 end
+                log("  Detektor sieht in Reichweite: " .. spielerInReichweiteText())
                 letzterZustand = aktuellerZustand
                 letzterSpielerName = spielerName
             end
@@ -1255,6 +1288,7 @@ ladeRuntime()
 alleGeschwindigkeitenAnwenden()
 zustandInitialisieren()
 parallel.waitForAny(uiSchleife, redstoneTriggerUeberwachung, geofenceUeberwachung, monitorUeberwachung)
+
 
 
 
